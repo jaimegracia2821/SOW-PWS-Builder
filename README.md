@@ -5,7 +5,7 @@ decisions and assembles a contract-file-ready **Statement of Work** or
 **Performance Work Statement** — aware of the Revolutionary FAR Overhaul (RFO)
 and Executive Order 14402.
 
-**▶ Live tool:** https://claude.ai/public/artifacts/1dd25fd9-adc8-4ff3-ae09-9c37555b6ada
+**▶ Live tool:** https://jaimegracia2821.github.io/sow-pws-builder
 
 No install, no account, no backend. Everything runs in the browser; nothing you
 type is uploaded or stored anywhere.
