@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOW / PWS Builder — RFO-aware requirement drafting</title>
+<meta name="description" content="Free browser tool that walks a program office through scope decisions and assembles a contract-file-ready SOW or PWS — RFO / EO 14402 aware. Runs entirely in your browser; nothing is uploaded.">
+<meta name="author" content="The Wolverine Group, Inc.">
+<meta property="og:title" content="SOW / PWS Builder — RFO-aware">
+<meta property="og:description" content="Turn scope decisions into a compliant SOW or PWS. RFO-aware citations, EO 14402 fixed-price gate, staffing/CLIN firewall. Runs locally in the browser.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#12151c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e7c86'/%3E%3Ctext x='16' y='23' font-size='20' font-family='monospace' font-weight='700' fill='white' text-anchor='middle'%3E%C2%A7%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --ink:#12151c; --ink-2:#1b202b; --ink-3:#2a3140;
+    --surface:#eef1f5; --card:#ffffff; --line:#dde2ea; --line-2:#e8ebf1;
+    --text:#1b202b; --muted:#5b6675; --faint:#8a95a3;
+    --primary:#33518f; --primary-ink:#26406f; --primary-wash:#eef2fb;
+    --legacy:#647285; --legacy-wash:#eef0f3;
+    --rfo:#0e7c86; --rfo-wash:#e5f4f4;
+    --warn:#b5761f; --warn-wash:#fdf3e2; --warn-line:#f0dcb4;
+    --ok:#1f7a54; --ok-wash:#e8f4ee;
+    --stop:#b23b3b; --stop-wash:#faeceb;
+    --mono:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --r:10px; --r-sm:7px;
+    --shadow:0 1px 2px rgba(18,21,28,.06),0 6px 20px rgba(18,21,28,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:var(--sans);color:var(--text);background:var(--surface);line-height:1.5;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4{margin:0;font-weight:650;letter-spacing:-.01em}
+  button{font-family:inherit;cursor:pointer}
+  .mono{font-family:var(--mono)}
+
+  /* ---------- shell ---------- */
+  .app{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
+  .rail{background:var(--ink);color:#c6cdd8;padding:22px 18px;position:sticky;top:0;height:100vh;overflow-y:auto}
+  .brand{display:flex;gap:11px;align-items:center;margin-bottom:6px}
+  .brand-mark{width:34px;height:34px;border-radius:8px;background:linear-gradient(150deg,var(--rfo),var(--primary));display:grid;place-items:center;color:#fff;font-family:var(--mono);font-weight:700;font-size:15px;flex:none}
+  .brand h1{color:#fff;font-size:15px;line-height:1.15}
+  .brand .sub{font-size:11px;color:#7d8794;letter-spacing:.04em;text-transform:uppercase}
+  .rail-note{font-size:11.5px;color:#8b95a2;margin:14px 0 20px;padding:10px 11px;background:#1b212c;border-radius:8px;border:1px solid #232b38}
+
+  .steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+  .step{display:flex;gap:11px;align-items:flex-start;padding:9px 10px;border-radius:8px;font-size:13.5px;color:#aeb7c3;position:relative}
+  .step .n{font-family:var(--mono);font-size:11px;width:20px;height:20px;border-radius:50%;border:1.5px solid #3a4453;display:grid;place-items:center;flex:none;color:#8b95a2;margin-top:1px}
+  .step.done .n{background:var(--rfo);border-color:var(--rfo);color:#fff}
+  .step.active{background:#1e2530;color:#fff}
+  .step.active .n{border-color:var(--primary);color:#fff}
+  .step.locked{opacity:.42}
+  .step .lbl small{display:block;color:#727d8b;font-size:11px;margin-top:1px}
+  .step.active .lbl small{color:#94a0ae}
+
+  .rail-status{margin-top:18px;border-top:1px solid #232b38;padding-top:16px}
+  .rail-status .k{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#727d8b;margin-bottom:6px}
+
+  /* ---------- main ---------- */
+  .main{display:flex;flex-direction:column;min-height:100vh}
+  .topbar{position:sticky;top:0;z-index:20;background:rgba(238,241,245,.86);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 30px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .topbar .title{font-size:14px;font-weight:600;margin-right:auto}
+  .topbar .title span{color:var(--muted);font-weight:450}
+  .content{padding:30px;max-width:1180px;width:100%;margin:0 auto;flex:1}
+
+  .regime-badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:20px;border:1px solid}
+  .regime-badge.none{color:var(--faint);border-color:var(--line);background:#fff}
+  .regime-badge.legacy{color:#495566;border-color:#cfd6df;background:var(--legacy-wash)}
+  .regime-badge.rfo{color:#0a5b63;border-color:#a9dcdf;background:var(--rfo-wash)}
+  .regime-badge .dot{width:7px;height:7px;border-radius:50%}
+  .regime-badge.legacy .dot{background:var(--legacy)}
+  .regime-badge.rfo .dot{background:var(--rfo)}
+
+  .compliance-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:20px;border:1px solid var(--line);background:#fff;color:var(--muted)}
+  .compliance-chip.pass{color:#146046;background:var(--ok-wash);border-color:#bfe2d0}
+  .compliance-chip.warn{color:#8a5a12;background:var(--warn-wash);border-color:var(--warn-line)}
+
+  /* ---------- cards / questions ---------- */
+  .eyebrow{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--primary);font-weight:700;margin-bottom:10px}
+  .phase-head{margin-bottom:24px}
+  .phase-head h2{font-size:25px;letter-spacing:-.02em}
+  .phase-head p{color:var(--muted);margin:8px 0 0;max-width:70ch;font-size:14.5px}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);margin-bottom:18px}
+  .card > .q-label{font-size:15px;font-weight:600;margin-bottom:4px}
+  .card > .q-help{font-size:13px;color:var(--muted);margin-bottom:14px}
+
+  .opts{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+  .opt{border:1.5px solid var(--line);background:#fff;border-radius:var(--r-sm);padding:13px 14px;text-align:left;transition:border-color .12s,background .12s,box-shadow .12s;display:flex;flex-direction:column;gap:3px}
+  .opt:hover{border-color:#b7c2d4}
+  .opt .t{font-weight:600;font-size:13.5px}
+  .opt .d{font-size:12px;color:var(--muted)}
+  .opt.sel{border-color:var(--primary);background:var(--primary-wash);box-shadow:inset 0 0 0 1px var(--primary)}
+  .opt.sel .t{color:var(--primary-ink)}
+  .opt:focus-visible{outline:2.5px solid var(--primary);outline-offset:2px}
+
+  .field{margin-top:14px}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:5px}
+  input[type=text],input[type=number],textarea,select{width:100%;font-family:inherit;font-size:14px;padding:10px 12px;border:1.5px solid var(--line);border-radius:var(--r-sm);background:#fff;color:var(--text)}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-wash)}
+  textarea{resize:vertical;min-height:70px}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .inline-mono input{font-family:var(--mono)}
+
+  /* ---------- citation token (signature) ---------- */
+  .cite{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11.5px;font-weight:600;background:#fff;border:1px solid var(--line);border-left-width:4px;border-radius:5px;padding:2px 8px 2px 7px;color:#33405a;white-space:nowrap;line-height:1.35}
+  .cite.legacy{border-left-color:var(--legacy)}
+  .cite.rfo{border-left-color:var(--rfo);color:#0a5b63}
+  .cite .asof{font-family:var(--sans);font-size:9.5px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:.03em}
+  .cite-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+
+  /* ---------- gate / callouts ---------- */
+  .callout{border-radius:var(--r);padding:16px 18px;margin-top:16px;border:1px solid;font-size:13.5px}
+  .callout h4{font-size:13.5px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .callout.warn{background:var(--warn-wash);border-color:var(--warn-line);color:#7a5210}
+  .callout.warn h4{color:#8a5a12}
+  .callout.info{background:var(--primary-wash);border-color:#cdd9f0;color:#33405a}
+  .callout.stop{background:var(--stop-wash);border-color:#eec8c6;color:#8f2f2f}
+  .callout.ok{background:var(--ok-wash);border-color:#bfe2d0;color:#146046}
+  .callout ul{margin:8px 0 0;padding-left:18px}
+  .callout li{margin:3px 0}
+  .badge-pill{font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:#fff;border:1px solid currentColor}
+
+  /* ---------- nav ---------- */
+  .navbar{display:flex;justify-content:space-between;gap:12px;margin-top:8px;padding-top:20px;border-top:1px solid var(--line)}
+  .btn{border:1.5px solid var(--line);background:#fff;color:var(--text);padding:11px 20px;border-radius:var(--r-sm);font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+  .btn:hover{border-color:#b7c2d4}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .btn.primary:hover{background:var(--primary-ink)}
+  .btn.primary:disabled{background:#aab6cc;border-color:#aab6cc;cursor:not-allowed}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+  .btn:focus-visible{outline:2.5px solid var(--primary);outline-offset:2px}
+
+  /* ---------- staffing / tables ---------- */
+  table.grid{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  table.grid th{text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1.5px solid var(--line);font-weight:700}
+  table.grid td{padding:9px 10px;border-bottom:1px solid var(--line-2);vertical-align:top}
+  table.grid td.mono,table.grid td input{font-family:var(--mono);font-size:12.5px}
+  table.grid tr:last-child td{border-bottom:none}
+  .tbl-input{width:100%;border:1px solid transparent;background:transparent;padding:5px 6px;border-radius:5px;font-size:13px}
+  .tbl-input:hover{border-color:var(--line)}
+  .tbl-input:focus{border-color:var(--primary);background:#fff;outline:none}
+  .row-del{border:none;background:transparent;color:var(--faint);font-size:16px;line-height:1;padding:4px 6px;border-radius:5px}
+  .row-del:hover{color:var(--stop);background:var(--stop-wash)}
+
+  /* ---------- workspace tabs ---------- */
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:20px}
+  .tab{border:none;background:transparent;padding:11px 15px;font-size:13.5px;font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:7px}
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--primary-ink);border-bottom-color:var(--primary)}
+  .tab .tag{font-family:var(--mono);font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--warn-wash);color:#8a5a12;border:1px solid var(--warn-line)}
+  .tab .tag.doc{background:var(--ok-wash);color:#146046;border-color:#bfe2d0}
+
+  .workpaper-banner{font-size:12.5px;background:var(--warn-wash);border:1px solid var(--warn-line);color:#7a5210;padding:11px 14px;border-radius:var(--r-sm);margin-bottom:14px;display:flex;gap:9px;align-items:flex-start}
+  .workpaper-banner b{color:#6b4710}
+
+  /* ---------- document render ---------- */
+  .doc-shell{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+  .doc-toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:#fafbfd;border-radius:var(--r) var(--r) 0 0}
+  .doc-toolbar .sp{margin-left:auto;font-size:12px;color:var(--faint)}
+  .doc-body{padding:34px 44px;font-size:13.5px;color:#20242c;max-width:860px}
+  .doc-body h1.dt{font-size:20px;text-align:center;margin-bottom:2px}
+  .doc-body .doc-sub{text-align:center;color:var(--muted);font-size:12.5px;margin-bottom:22px}
+  .doc-body h2.sec{font-size:15px;border-bottom:1.5px solid var(--ink-3);padding-bottom:4px;margin:26px 0 10px;letter-spacing:-.01em}
+  .doc-body h3.sub{font-size:13.5px;margin:16px 0 5px;color:var(--ink-3)}
+  .doc-body p{margin:7px 0}
+  .doc-body .ph{color:#9a6b16;background:#fdf6e6;border:1px dashed #e6c983;border-radius:4px;padding:1px 6px;font-size:12.5px;font-style:italic}
+  .doc-body table.d{width:100%;border-collapse:collapse;font-size:12px;margin:10px 0}
+  .doc-body table.d th{background:#f2f4f8;text-align:left;padding:6px 9px;border:1px solid #d7dde6;font-weight:700;font-size:11px}
+  .doc-body table.d td{padding:6px 9px;border:1px solid #dde2ea;vertical-align:top}
+  .doc-body .cref{font-family:var(--mono);font-size:11.5px;color:#33405a;background:#f4f6f9;padding:1px 5px;border-radius:4px;border:1px solid #e2e7ee}
+  .doc-body ul.dl{margin:6px 0;padding-left:20px}
+  .doc-body .toc{border:1px solid var(--line);border-radius:8px;padding:12px 16px;background:#fafbfd;margin:14px 0 8px}
+  .doc-body .toc div{font-size:12.5px;padding:2px 0;color:#3a4656}
+  .asof-stamp{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+
+  /* ---------- preflight ---------- */
+  .check{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-sm);margin-bottom:9px;background:#fff}
+  .check .ic{width:22px;height:22px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:13px;font-weight:700;margin-top:1px}
+  .check.pass .ic{background:var(--ok-wash);color:var(--ok)}
+  .check.warn .ic{background:var(--warn-wash);color:var(--warn)}
+  .check.stop .ic{background:var(--stop-wash);color:var(--stop)}
+  .check .body{font-size:13.5px}
+  .check .body b{font-size:13.5px}
+  .check .body p{margin:3px 0 0;color:var(--muted);font-size:12.5px}
+
+  .authreg{display:grid;gap:10px}
+  .auth-item{border:1px solid var(--line);border-radius:var(--r-sm);padding:13px 15px;background:#fff;display:flex;gap:13px;align-items:flex-start}
+  .auth-item .lbl{flex:none;width:112px}
+  .auth-item .lbl .cite{font-size:11px}
+  .auth-item .meta .nm{font-weight:600;font-size:13.5px}
+  .auth-item .meta .ds{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .auth-item .meta a{color:var(--primary);font-size:11.5px;font-family:var(--mono);text-decoration:none}
+  .auth-item .meta a:hover{text-decoration:underline}
+
+  .hint{font-size:12px;color:var(--faint);margin-top:10px}
+  .divider{height:1px;background:var(--line);margin:22px 0}
+
+  @media (max-width:900px){
+    .app{grid-template-columns:1fr}
+    .rail{position:static;height:auto;display:flex;flex-direction:column}
+    .steps{flex-direction:row;overflow-x:auto;gap:6px}
+    .step{flex-direction:column;min-width:96px;text-align:center;align-items:center;font-size:11px}
+    .step .lbl small{display:none}
+    .rail-status,.rail-note{display:none}
+    .content{padding:20px}
+    .doc-body{padding:22px}
+    .grid-2{grid-template-columns:1fr}
+  }
+  @media print{
+    .rail,.topbar,.tabs,.doc-toolbar,.navbar,.no-print{display:none !important}
+    .app{display:block}.content{padding:0;max-width:none}
+    .doc-shell{border:none;box-shadow:none}
+    .doc-body{max-width:none;padding:0}
+    .doc-body .ph{background:none;border:none;color:#555}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none !important}}
+
+  /* ---------- landing gate ---------- */
+  .gate{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#12151c,#1b2330 60%,#123a3e);color:#e6ebf1;display:grid;place-items:center;padding:30px;overflow-y:auto}
+  .gate-inner{max-width:640px;width:100%}
+  .gate .brand-mark{width:46px;height:46px;font-size:22px;border-radius:11px;margin-bottom:22px}
+  .gate h2{font-size:30px;letter-spacing:-.02em;line-height:1.1;margin-bottom:12px}
+  .gate .lede{font-size:15.5px;color:#aab6c4;line-height:1.55;margin-bottom:24px;max-width:56ch}
+  .gate .discl{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:16px 18px;font-size:12.8px;color:#9fb0bf;line-height:1.6;margin-bottom:24px}
+  .gate .discl b{color:#cdd8e2}
+  .gate .discl ul{margin:8px 0 0;padding-left:18px}
+  .gate .discl li{margin:4px 0}
+  .gate .actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .gate .start{background:#0e7c86;border:none;color:#fff;font-size:15px;font-weight:650;padding:14px 26px;border-radius:9px}
+  .gate .start:hover{background:#0c6b74}
+  .gate .load{background:transparent;border:1.5px solid rgba(255,255,255,.22);color:#cdd8e2;font-size:14px;font-weight:600;padding:13px 20px;border-radius:9px}
+  .gate .load:hover{border-color:rgba(255,255,255,.4)}
+  .gate .foot{margin-top:26px;font-size:11.5px;color:#6f7d8c;font-family:var(--mono)}
+  .gate.hidden{display:none}
+
+  /* ---------- session controls + footer ---------- */
+  .sess{display:flex;gap:7px}
+  .sess .btn{padding:7px 12px;font-size:12.5px}
+  .sitefoot{border-top:1px solid var(--line);padding:20px 30px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
+  .sitefoot .v{font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .sitefoot a{color:var(--primary);text-decoration:none}
+  .sitefoot a:hover{text-decoration:underline}
+  .sitefoot .disc{max-width:64ch;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="gate" id="gate">
+  <div class="gate-inner">
+    <div class="brand-mark">§</div>
+    <h2>SOW / PWS Builder</h2>
+    <p class="lede">Make the scope decisions; the tool assembles a contract-file-ready Statement of Work or Performance Work Statement — with citations that resolve to either the codified FAR or the Revolutionary FAR Overhaul, an EO 14402 fixed-price gate, and staffing and CLIN data kept out of the requirement body by design.</p>
+    <div class="discl">
+      <b>Before you start — read this:</b>
+      <ul>
+        <li>This is an <b>independent drafting aid</b>, not an official Government system and not legal or contracting advice.</li>
+        <li>It produces a <b>draft with marked placeholders</b>. A contracting officer must review and complete it.</li>
+        <li>Regulatory references are current <b>as of July 2026</b> and the RFO model text moves often — verify against <b>acquisition.gov/far-overhaul</b> before any solicitation release.</li>
+        <li>Everything runs <b>in your browser</b>. Nothing you type is uploaded, stored on a server, or transmitted anywhere.</li>
+      </ul>
+    </div>
+    <div class="actions">
+      <button class="start" onclick="startApp()">Start building →</button>
+      <button class="load" onclick="document.getElementById('loadFileGate').click()">Load saved draft</button>
+      <input type="file" id="loadFileGate" accept="application/json" style="display:none" onchange="loadDraft(this.files[0],true)">
+    </div>
+    <div class="foot">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener" style="color:#9fb0bf">James Jenrette · 1102tools.com</a> (MIT).<br>Runs offline · single file · v1.0 · © The Wolverine Group, Inc.</div>
+  </div>
+</div>
+
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <div class="brand-mark">§</div>
+      <div>
+        <h1>SOW / PWS Builder</h1>
+        <div class="sub">RFO-aware · v1</div>
+      </div>
+    </div>
+    <div class="rail-note">Scope decisions in, a contract-file-ready requirement out. Staffing, CLINs, and the 16.104 justification stay out of the document body by design.</div>
+    <ol class="steps" id="steps"></ol>
+    <div class="rail-status" id="railStatus"></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="title" id="topTitle">New requirement</div>
+      <span class="regime-badge none" id="regimeBadge"><span class="dot"></span> No regime set</span>
+      <span class="compliance-chip" id="compChip">Incomplete</span>
+      <span class="sess">
+        <button class="btn" onclick="saveDraft()" title="Download your progress as a JSON file">Save draft</button>
+        <button class="btn" onclick="document.getElementById('loadFile').click()" title="Load a saved draft">Load</button>
+        <button class="btn ghost" onclick="if(confirm('Start over? Unsaved progress will be lost.'))location.reload()">Start over</button>
+        <input type="file" id="loadFile" accept="application/json" style="display:none" onchange="loadDraft(this.files[0],false)">
+      </span>
+    </div>
+    <div class="content" id="content"></div>
+    <footer class="sitefoot">
+      <span class="v">SOW / PWS Builder v1.0 · regulatory content last reviewed <span id="lastReviewed"></span></span>
+      <span class="disc">Independent drafting aid — not an official Government system, and not legal or contracting advice. Citations current as of the review date above; the RFO model text changes often — verify against the source before release.</span>
+      <a href="https://www.acquisition.gov/far-overhaul" target="_blank" rel="noopener">acquisition.gov/far-overhaul ↗</a>
+      <span class="disc">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener">James Jenrette · 1102tools.com</a> (MIT). Maintained independently by The Wolverine Group, Inc.</span>
+    </footer>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================ DATA ============================ */
+/* ---- MAINTENANCE: update these two lines when you review regulatory content ---- */
+const ASOF = "Jul 2026";              // stamp shown on every citation token
+const REVIEWED = "18 July 2026";      // stamp shown in the footer
+/* ------------------------------------------------------------------------------- */
+const FAR_OVERHAUL = "https://www.acquisition.gov/far-overhaul";
+const DEV_GUIDE = "https://www.acquisition.gov/far-overhaul/far-part-deviation-guide";
+
+// Preloaded agencies with EO 14402 / FAR 16.104 agency-head approval thresholds.
+// Thresholds per FAR Council Guidance to Implement E.O. 14402 (as of Jul 2026).
+const AGENCIES = {
+  DOD:  {name:"Department of Defense (DoD)", threshold:100000000, devSeries:"DPCAP class deviation (DFARS/FAR)", note:"$100M agency-head approval tier. Some sources render this as 'Department of War'."},
+  NASA: {name:"NASA", threshold:35000000, devSeries:"NASA RFO class deviation", note:"$35M agency-head approval tier."},
+  DHS:  {name:"Department of Homeland Security (DHS)", threshold:25000000, devSeries:"HSAR / DHS RFO class deviation", note:"$25M agency-head approval tier."},
+  DOE:  {name:"Department of Energy (DOE)", threshold:10000000, devSeries:"DOE Policy Flash (PF) series", note:"All-other-agencies $10M tier."},
+  GSA:  {name:"General Services Administration (GSA)", threshold:10000000, devSeries:"GSA RFO class deviation", note:"All-other-agencies $10M tier."},
+  VA:   {name:"Department of Veterans Affairs (VA)", threshold:10000000, devSeries:"VA RFO class deviation", note:"All-other-agencies $10M tier."},
+  HHS:  {name:"Health & Human Services (HHS)", threshold:10000000, devSeries:"HHSAR / HHS RFO class deviation", note:"All-other-agencies $10M tier."},
+  OTHER:{name:"Other / all other agencies", threshold:10000000, devSeries:"agency RFO class deviation", note:"All-other-agencies $10M tier. Enter your agency's instrument manually."}
+};
+
+// Authority register — dated, source-linked.
+const AUTHORITIES = [
+  {id:"EO 14275", name:"Restoring Common Sense to Federal Procurement", ds:"Anchor executive order launching the FAR overhaul.", asof:ASOF, url:FAR_OVERHAUL, regime:"rfo"},
+  {id:"OMB M-25-26", name:"Overhauling the Federal Acquisition Regulation", ds:"OMB implementation memorandum directing the RFO.", asof:ASOF, url:FAR_OVERHAUL, regime:"rfo"},
+  {id:"FAR Council Dev. Guidance", name:"Deviation Guidance to Support the Overhaul of the FAR", ds:"Mechanism: agencies adopt RFO model deviation text in lieu of codified CFR parts.", asof:ASOF, url:DEV_GUIDE, regime:"rfo"},
+  {id:"EO 14402", name:"Promoting Efficiency, Accountability, and Performance in Federal Contracting", ds:"Fixed-price as default & preferred type; FAR 16.104 justification for covered contracts. Issued Apr 30, 2026.", asof:ASOF, url:FAR_OVERHAUL, regime:"rfo"},
+  {id:"EO 14398", name:"Addressing DEI Discrimination by Federal Contractors", ds:"Rewrote FAR Part 22 / 52 clause text. Handled at the solicitation layer, not the requirement body.", asof:ASOF, url:FAR_OVERHAUL, regime:"rfo"}
+];
+
+// Citation resolver: key -> {legacy, rfo, note}
+const CITES = {
+  results:   {legacy:"FAR 37.102(d)", rfo:"RFO Part 37 (model deviation)", note:"Describe the requirement in terms of results, not hours or number of people. Principle survives the rewrite."},
+  pba:       {legacy:"FAR 37.602", rfo:"RFO Part 37 (model deviation)", note:"Performance-based description preference."},
+  qa:        {legacy:"FAR 46.401", rfo:"RFO Part 46 (model deviation)", note:"Quality assurance / surveillance basis (PWS)."},
+  inspect:   {legacy:"FAR 52.246-series", rfo:"RFO Part 46 / 52 (model deviation)", note:"Inspection & acceptance basis (SOW)."},
+  ceiling:   {legacy:"FAR 16.601(c)(2)", rfo:"RFO Part 16 (model deviation)", note:"T&M/LH ceiling-hours pricing mechanism."},
+  fp_pref:   {legacy:"FAR 16.104", rfo:"RFO Part 16 §16.104 (EO 14402)", note:"EO 14402 justification for covered (other-than-FFP / FFP-LOE) contracts."},
+  cpff:      {legacy:"FAR 16.306(d)", rfo:"RFO Part 16 (model deviation)", note:"CPFF completion (d)(1) vs term (d)(2) form commitment."},
+  commercial:{legacy:"FAR Part 12 / 52.212-4", rfo:"RFO Part 12 (model deviation)", note:"Commercial product/service terms."},
+  safeguard: {legacy:"FAR 52.204-21", rfo:"RFO Part 4 / 52 (model deviation)", note:"Basic safeguarding of contractor information systems."},
+  keypers:   {legacy:"agency supplement (e.g., HSAR 3052.237-72)", rfo:"agency supplement + RFO Part 37", note:"Key personnel substitution — never cite FAR 52.237-2."},
+  svc_part:  {legacy:"FAR Part 37", rfo:"RFO Part 37 (model deviation)", note:"Service contracting; performance-based preference."},
+  sca:       {legacy:"FAR 22.10 / 52.222-41", rfo:"RFO Part 22 (model deviation)", note:"Service Contract Labor Standards — DOL wage determination sets minimum wages/benefits."},
+  pers_svc:  {legacy:"FAR 37.104", rfo:"RFO Part 37 (model deviation)", note:"Personal-services contracts are generally prohibited absent specific statutory authority."},
+  con_part:  {legacy:"FAR Part 36", rfo:"RFO Part 36 (model deviation)", note:"Construction & A/E contracting."},
+  davis:     {legacy:"FAR 22.4 / 52.222-6", rfo:"RFO Part 22 (model deviation)", note:"Construction Wage Rate Requirements (Davis-Bacon) — DOL wage determination."},
+  miller:    {legacy:"FAR 28.1 / 52.228-15", rfo:"RFO Part 28 (model deviation)", note:"Miller Act performance & payment bonds for construction over the threshold."},
+  magnitude: {legacy:"FAR 36.204", rfo:"RFO Part 36 (model deviation)", note:"Disclose the magnitude (price range) of construction — not the Government estimate."},
+  brooks:    {legacy:"FAR 36.6 / 40 U.S.C. 1101-1104", rfo:"RFO Part 36 (model dev.) / 40 U.S.C. 1101-1104", note:"Brooks Act — qualifications-based selection; price is not an initial selection factor."},
+  aefee:     {legacy:"FAR 15.404-4(c)(4)(i)(B) / 40 U.S.C. 1104(b)", rfo:"RFO Part 15 (model dev.) / 40 U.S.C. 1104(b)", note:"A/E design fee capped at 6% of estimated construction cost (civilian); DoD 10% per DFARS 236.606-70."},
+  rnd_part:  {legacy:"FAR Part 35", rfo:"RFO Part 35 (model deviation)", note:"R&D contracting; flexible work statements; technical results are not guaranteed."},
+  datarights:{legacy:"FAR Part 27 (27.4)", rfo:"RFO Part 27 (model deviation)", note:"Rights in technical data and computer software."}
+};
+
+// Acquisition domains — each reshapes the scope tree, derivation, compliance, and document.
+const DOMAINS = {
+  it:          {label:"IT / Systems", blurb:"Software, platforms, service desk, data — build/buy, integration, automation.", doc:"PWS", type:"FFP"},
+  services:    {label:"Services (non-IT)", blurb:"Professional, program-support, O&M, facilities, logistics, staff augmentation.", doc:"PWS", type:"FFP"},
+  construction:{label:"Construction", blurb:"New work, renovation, or repair of real property (FAR Part 36).", doc:"SOW", type:"FFP"},
+  ae:          {label:"Architect-Engineer (A/E)", blurb:"Design services under the Brooks Act — qualifications-based selection.", doc:"SOW", type:"FFP"},
+  rnd:         {label:"Research & Development", blurb:"Basic/applied research or development (FAR Part 35); outcome uncertain.", doc:"SOW", type:"CR"}
+};
+function dom(){ return state.domain?DOMAINS[state.domain]:null; }
+function aeFeePct(){ return state.agencyKey==="DOD"?10:6; }
+
+/* ============================ STATE ============================ */
+const state = {
+  step:0,
+  regime:null, agencyKey:null, devNo:"", devDate:"",
+  domain:null,
+  title:"", agencyName:"", background:"", estValue:"",
+  docType:null, contractType:null, cpffForm:null, commercial:null,
+  b:{ coverage:null, delivery:null, geo:null, sites:"",
+      buildbuy:null, systems:"", integration:null, migration:null, ai:null,
+      volume:"", users:null, growth:null,
+      orgunits:"", phasing:null,
+      pop:null, oy:"4", basescope:null, clin:null, transition:null,
+      aql:"", reporting:null,
+      // services
+      svcFunctions:"", svcSca:null, svcWorkload:"", svcSurge:null, svcPersonal:null,
+      // construction
+      conType:null, conDelivery:null, conMagnitude:null, conBond:null, conSite:"", conSustain:null,
+      // A/E
+      aePhases:[], aeDisciplines:"", aeConstCost:"", aeInvestigative:null,
+      // R&D
+      rdType:null, rdObjective:"", rdEffort:null, rdData:null, rdProto:null, rdVehicle:null },
+  keyPersonnel:"Program Manager",
+  keyEdited:false,
+  staffing:[], staffingBuilt:false,
+  summaryApproved:false, generated:false,
+  wsTab:"doc"
+};
+
+const STEPS = [
+  {key:"regime", n:"Regulatory regime", sub:"EO · OMB · deviation"},
+  {key:"intake", n:"Strategy intake", sub:"domain · type · commercial"},
+  {key:"block1", n:"Mission & model", sub:"Block 1"},
+  {key:"block2", n:"Scope detail", sub:"Block 2"},
+  {key:"block3", n:"Workload & scale", sub:"Block 3"},
+  {key:"block4", n:"Structure & oversight", sub:"Blocks 4–6"},
+  {key:"staffing", n:"Derived staffing", sub:"Validation gate"},
+  {key:"summary", n:"Decision summary", sub:"Assembly gate"},
+  {key:"workspace", n:"Document & handoffs", sub:"Outputs"}
+];
+
+/* ============================ HELPERS ============================ */
+const $ = s => document.querySelector(s);
+const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money = n => { n=Number(n); if(!n||isNaN(n)) return "$—"; if(n>=1e9)return "$"+(n/1e9).toFixed(n%1e9?1:0)+"B"; if(n>=1e6)return "$"+(n/1e6).toFixed(n%1e6?1:0)+"M"; if(n>=1e3)return "$"+(n/1e3).toFixed(0)+"K"; return "$"+n; };
+const parseMoney = s => { if(!s) return 0; const m=String(s).replace(/[^0-9.]/g,""); let v=parseFloat(m)||0; if(/b/i.test(s))v*=1e9; else if(/m/i.test(s))v*=1e6; else if(/k/i.test(s))v*=1e3; return v; };
+
+function citeToken(key){
+  const c = CITES[key]; if(!c) return "";
+  const rfo = state.regime==="rfo";
+  const ref = rfo ? c.rfo : c.legacy;
+  return `<span class="cite ${rfo?'rfo':'legacy'}" title="${esc(c.note)}">${esc(ref)}<span class="asof">${rfo?ASOF:'FAR'}</span></span>`;
+}
+function citeText(key){ const c=CITES[key]; return state.regime==="rfo"?c.rfo:c.legacy; }
+
+const COVERED_TYPES = ["FFP-LOE","TM","LH","CR","CPFF","HYBRID"];
+const isCovered = () => COVERED_TYPES.includes(state.contractType);
+function agency(){ return state.agencyKey?AGENCIES[state.agencyKey]:null; }
+function needsAgencyHead(){
+  const a=agency(); if(!a||!isCovered()) return false;
+  return parseMoney(state.estValue) >= a.threshold;
+}
+
+/* ============================ NAV / RENDER ============================ */
+function stepUnlocked(i){
+  if(i<=0) return true;
+  if(i>=1 && !(state.regime && state.agencyKey)) return false;
+  if(i>=2 && !(state.domain && state.docType && state.contractType && state.commercial)) return false;
+  if(i>=6 && !firstFourDone()) return false;
+  if(i>=7 && !state.staffingBuilt) return false;
+  if(i>=8 && !state.summaryApproved) return false;
+  return true;
+}
+function block2Done(){
+  const b=state.b;
+  switch(state.domain){
+    case "services": return !!b.svcSca;
+    case "construction": return !!(b.conType&&b.conDelivery&&b.conMagnitude);
+    case "ae": return !!(b.aePhases&&b.aePhases.length&&b.aeConstCost!=="");
+    case "rnd": return !!(b.rdType&&b.rdEffort);
+    default: return !!(b.buildbuy&&b.integration&&b.migration&&b.ai);
+  }
+}
+function firstFourDone(){ const b=state.b; const b1=["it","services"].includes(state.domain)?(b.coverage&&b.delivery):true; return b1&&block2Done()&&b.pop&&b.clin&&b.reporting; }
+
+function go(i){ if(!stepUnlocked(i))return; state.step=i; window.scrollTo(0,0); render(); }
+function next(){ go(state.step+1); }
+function prev(){ go(state.step-1); }
+function set(k,v){ state[k]=v; render(); }
+function setB(k,v){ state.b[k]=v; render(); }
+
+function render(){
+  renderRail();
+  renderTop();
+  const c = $("#content");
+  const key = STEPS[state.step].key;
+  const fn = {regime:renderRegime,intake:renderIntake,block1:renderBlock1,block2:renderBlock2,block3:renderBlock3,block4:renderBlock4,staffing:renderStaffing,summary:renderSummary,workspace:renderWorkspace}[key];
+  c.innerHTML = fn();
+  bind();
+}
+
+function renderRail(){
+  $("#steps").innerHTML = STEPS.map((s,i)=>{
+    const cls = i===state.step?"active":(i<state.step&&stepUnlocked(i)?"done":"") + (stepUnlocked(i)?"":" locked");
+    return `<li class="step ${cls}" data-go="${i}" tabindex="0" role="button">
+      <span class="n">${i<state.step&&stepUnlocked(i)?"✓":i+1}</span>
+      <span class="lbl">${esc(s.n)}<small>${esc(s.sub)}</small></span></li>`;
+  }).join("");
+  const pf = preflight();
+  const pass = pf.filter(x=>x.status==="pass").length;
+  $("#railStatus").innerHTML = `<div class="k">Compliance preflight</div>
+    <div style="font-family:var(--mono);font-size:13px;color:#cfd6df">${pass}/${pf.length} checks pass</div>
+    ${pf.some(x=>x.status==="stop")?'<div style="font-size:11.5px;color:#e08c8c;margin-top:6px">Blocking items remain</div>':''}`;
+}
+function renderTop(){
+  $("#topTitle").innerHTML = state.title?`${esc(state.title)} <span>· ${state.docType||""}</span>`:"New requirement";
+  const rb=$("#regimeBadge");
+  if(!state.regime){ rb.className="regime-badge none"; rb.innerHTML='<span class="dot"></span> No regime set'; }
+  else if(state.regime==="legacy"){ rb.className="regime-badge legacy"; rb.innerHTML='<span class="dot"></span> Codified FAR'; }
+  else { rb.className="regime-badge rfo"; rb.innerHTML=`<span class="dot"></span> RFO · ${agency()?agency().name.split("(")[0].trim():""}`; }
+  const pf=preflight(); const stop=pf.some(x=>x.status==="stop"); const warn=pf.some(x=>x.status==="warn");
+  const chip=$("#compChip");
+  if(state.generated && !stop && !warn){ chip.className="compliance-chip pass"; chip.textContent="Preflight passed"; }
+  else if(state.generated && stop){ chip.className="compliance-chip warn"; chip.textContent="Blocking items"; }
+  else if(!state.regime){ chip.className="compliance-chip"; chip.textContent="Incomplete"; }
+  else { chip.className="compliance-chip warn"; chip.textContent="In progress"; }
+}
+
+function opt(val,cur,t,d,onclick){
+  return `<button class="opt ${cur===val?'sel':''}" ${onclick} tabindex="0">
+    <span class="t">${esc(t)}</span>${d?`<span class="d">${esc(d)}</span>`:""}</button>`;
+}
+function navbar(canNext,label){
+  return `<div class="navbar">
+    <button class="btn ghost" onclick="prev()" ${state.step===0?'style="visibility:hidden"':''}>← Back</button>
+    <button class="btn primary" ${canNext?"":"disabled"} onclick="next()">${label||"Continue"} →</button>
+  </div>`;
+}
+
+/* ============================ STEP: REGIME ============================ */
+function renderRegime(){
+  const a = agency();
+  return `
+  <div class="phase-head"><div class="eyebrow">Step 1 · Regulatory regime</div>
+    <h2>Which authority governs this action?</h2>
+    <p>This single choice drives every citation the tool emits and the EO 14402 fixed-price logic downstream. It's the first question because the same scope produces different clause references under codified FAR versus the Revolutionary FAR Overhaul.</p></div>
+
+  <div class="card">
+    <div class="q-label">Governing regime</div>
+    <div class="q-help">Under the RFO, agencies adopt the FAR Council's model deviation text in lieu of the codified CFR parts, via their own class deviation.</div>
+    <div class="opts">
+      ${opt("legacy",state.regime,"Codified FAR (legacy)","Cite 48 CFR as published. Use where no RFO class deviation applies to this action.",'onclick="set(\'regime\',\'legacy\')"')}
+      ${opt("rfo",state.regime,"RFO under class deviation","Cite RFO model deviation text + your agency's class deviation, in lieu of the codified part.",'onclick="set(\'regime\',\'rfo\')"')}
+    </div>
+    ${state.regime?`<div class="cite-row">${["results","fp_pref","ceiling"].map(citeToken).join("")}<span class="hint" style="margin:0 0 0 4px">← citations will resolve to this regime</span></div>`:""}
+  </div>
+
+  <div class="card">
+    <div class="q-label">Agency</div>
+    <div class="q-help">Sets the EO 14402 / FAR 16.104 agency-head approval threshold and the class-deviation series referenced in the document.</div>
+    <select id="agencySel" onchange="set('agencyKey',this.value||null)">
+      <option value="">Select agency…</option>
+      ${Object.entries(AGENCIES).map(([k,v])=>`<option value="${k}" ${state.agencyKey===k?"selected":""}>${esc(v.name)} — ${money(v.threshold)} tier</option>`).join("")}
+    </select>
+    ${a?`<div class="callout info" style="margin-top:14px">
+      <h4>EO 14402 threshold for ${esc(a.name)}</h4>
+      Other-than-fixed-price actions at or above <span class="badge-pill">${money(a.threshold)}</span> require <b>agency-head approval</b> (delegable only to the CAO or a non-career SES). Below that, the CO still justifies in writing to the agency head. ${esc(a.note)}
+    </div>`:""}
+    ${state.regime==="rfo"?`
+    <div class="grid-2" style="margin-top:14px">
+      <div class="field inline-mono"><label>Agency class deviation no. (as issued)</label>
+        <input type="text" value="${esc(state.devNo)}" placeholder="e.g., PF 2026-21" oninput="state.devNo=this.value"></div>
+      <div class="field inline-mono"><label>Deviation effective date</label>
+        <input type="text" value="${esc(state.devDate)}" placeholder="e.g., 2026-03-16" oninput="state.devDate=this.value"></div>
+    </div>
+    <p class="hint">Referenced as ${esc(a?a.devSeries:"the agency class deviation")}. Verify the current model text at <span class="mono">acquisition.gov/far-overhaul</span> before release — Part 16 alone was revised twice this spring.</p>
+    `:""}
+  </div>
+
+  <div class="card">
+    <div class="q-label">Requirement identity</div>
+    <div class="grid-2">
+      <div class="field"><label>Working title</label><input type="text" value="${esc(state.title)}" placeholder="e.g., Enterprise Service Desk Support" oninput="state.title=this.value;renderTop()"></div>
+      <div class="field"><label>Program office / requiring activity</label><input type="text" value="${esc(state.agencyName)}" placeholder="e.g., Office of the CIO" oninput="state.agencyName=this.value"></div>
+    </div>
+    <div class="field"><label>Background (1.2) — plain summary of what the agency wants to achieve</label>
+      <textarea placeholder="Optional here; you can fill it in the document later." oninput="state.background=this.value">${esc(state.background)}</textarea></div>
+  </div>
+
+  ${navbar(!!(state.regime&&state.agencyKey))}`;
+}
+
+function setDomain(d){
+  state.domain=d;
+  const cfg=DOMAINS[d];
+  if(!state.docType) state.docType=cfg.doc;
+  if(!state.contractType) state.contractType=cfg.type;
+  if(!state.keyEdited) state.keyPersonnel=defaultKeyPersonnel(d);
+  render();
+}
+function defaultKeyPersonnel(d){
+  return {
+    it:"Program Manager, Technical Lead, Information Security Officer",
+    services:"Program Manager, Contract Manager, Quality Control Manager",
+    construction:"Project Manager, Site Superintendent, Quality Control Manager, Site Safety Officer",
+    ae:"Principal-in-Charge, Project Manager, Discipline Leads (Arch/Structural/MEP)",
+    rnd:"Principal Investigator, Co-Investigator, Program Manager"
+  }[d]||"Program Manager";
+}
+function domainComplianceCallout(){
+  const b=state.b;
+  switch(state.domain){
+    case "services": return `<div class="callout info"><h4>Services — labor standards & scope checks</h4>
+      Service employee labor is typically governed by the Service Contract Labor Standards (${citeToken("sca")}); a DOL wage determination will attach to the solicitation. Confirm the work is non-personal (${citeToken("pers_svc")}) and contains no inherently governmental functions.</div>`;
+    case "construction": return `<div class="callout info"><h4>Construction — Part 36 compliance stack</h4><ul>
+      <li>Construction wage rates apply — Davis-Bacon ${citeToken("davis")}; a DOL wage determination attaches.</li>
+      <li>Bonding under the Miller Act ${citeToken("miller")} for performance & payment above the threshold.</li>
+      <li>Disclose the <b>magnitude</b> (price range), not the Government estimate ${citeToken("magnitude")}.</li>
+      <li>Use SF-1442, not the UCF. This is drafted as an SOW referencing drawings & specifications.</li></ul></div>`;
+    case "ae": return `<div class="callout info"><h4>A/E — Brooks Act procurement</h4><ul>
+      <li>Selection is <b>qualifications-based</b> ${citeToken("brooks")} — price is not an initial evaluation factor; you negotiate with the most-qualified firm. Offerors submit SF-330.</li>
+      <li>Design fee for producing plans/specs is capped at <b>${aeFeePct()}%</b> of estimated construction cost ${citeToken("aefee")}${state.agencyKey==="DOD"?" (DoD 10% tier)":""}. Investigative/feasibility services are excluded from the cap.</li></ul></div>`;
+    case "rnd": return `<div class="callout info"><h4>R&D — Part 35 framing</h4><ul>
+      <li>Work is described in terms of the <b>research objective</b>, not a guaranteed end product ${citeToken("rnd_part")}. Cost-reimbursement / level-of-effort is common.</li>
+      <li>Address rights in technical data & software up front ${citeToken("datarights")}.</li>
+      <li>R&D is among the contexts EO 14402 recognizes for a fixed-price exception — document the basis in the 16.104 justification if you go non-FFP.</li></ul></div>`;
+    default: return "";
+  }
+}
+
+/* ============================ STEP: INTAKE ============================ */
+function renderIntake(){
+  const covered = isCovered();
+  const a=agency();
+  return `
+  <div class="phase-head"><div class="eyebrow">Step 2 · Acquisition strategy intake</div>
+    <h2>Framing decisions</h2>
+    <p>Domain sets the scope questions, derivation, and document structure. The three strategy choices set document type, pricing, and FAR Part applicability. Under EO 14402, fixed-price is the default and preferred type.</p></div>
+
+  <div class="card">
+    <div class="q-label">0 · Acquisition domain</div>
+    <div class="q-help">Reshapes Blocks 2–3, the derived roles, the compliance callouts, and the document sections.</div>
+    <div class="opts">
+      ${Object.entries(DOMAINS).map(([k,v])=>opt(k,state.domain,v.label,v.blurb,`onclick="setDomain('${k}')"`)).join("")}
+    </div>
+    ${state.domain?domainComplianceCallout():""}
+  </div>
+
+  <div class="card">
+    <div class="q-label">1 · SOW or PWS?</div>
+    <div class="q-help">${dom()?`Default for ${dom().label}: <b>${DOMAINS[state.domain].doc}</b>. `:""}If unsure, PWS is the FAR-preferred, performance-based approach. ${citeToken("pba")}</div>
+    <div class="opts">
+      ${opt("PWS",state.docType,"PWS — Performance Work Statement","Outcomes and standards (what). Contractor proposes approach.",'onclick="set(\'docType\',\'PWS\')"')}
+      ${opt("SOW",state.docType,"SOW — Statement of Work","Tasks and methods (how). Government directs approach.",'onclick="set(\'docType\',\'SOW\')"')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="q-label">2 · Contract type</div>
+    <div class="q-help">${citeToken("fp_pref")} EO 14402 makes FFP the default. Selecting a covered type surfaces the justification path.</div>
+    <div class="opts">
+      ${opt("FFP",state.contractType,"FFP — Firm-Fixed-Price","Preferred. Contractor owns labor-mix risk.",'onclick="set(\'contractType\',\'FFP\')"')}
+      ${opt("TM",state.contractType,"T&M — Time & Materials","Covered. Needs ceiling hours + justification.",'onclick="set(\'contractType\',\'TM\')"')}
+      ${opt("LH",state.contractType,"LH — Labor-Hour","Covered. Needs ceiling hours + justification.",'onclick="set(\'contractType\',\'LH\')"')}
+      ${opt("CR",state.contractType,"CR — Cost-Reimbursement","Covered. Approved accounting system + justification.",'onclick="set(\'contractType\',\'CR\')"')}
+      ${opt("CPFF",state.contractType,"CPFF","Covered. Requires completion vs term form commitment.",'onclick="set(\'contractType\',\'CPFF\')"')}
+      ${opt("HYBRID",state.contractType,"Hybrid","Covered if the non-FFP portion meets the threshold.",'onclick="set(\'contractType\',\'HYBRID\')"')}
+    </div>
+    ${state.contractType==="CPFF"?`
+      <div class="field" style="margin-top:16px"><label>CPFF form — required commitment ${citeToken("cpff")}</label>
+      <div class="opts">
+        ${opt("completion",state.cpffForm,"Completion form — 16.306(d)(1)","Definite end product; full fee on delivery.",'onclick="set(\'cpffForm\',\'completion\')"')}
+        ${opt("term",state.cpffForm,"Term form — 16.306(d)(2)","Level of effort over a period; fee across LOE.",'onclick="set(\'cpffForm\',\'term\')"')}
+      </div></div>`:""}
+
+    ${covered?`
+      <div class="callout warn">
+        <h4>⚠ EO 14402 justification required <span class="badge-pill">covered contract</span></h4>
+        This is a covered contract or order. A written justification to the agency head is required regardless of value, and it must be approved <b>before solicitation release</b>. ${state.domain==="rnd"?"R&D is a recognized exception context — state the basis. ":""}This tool emits a FAR 16.104 justification stub as a separate workpaper — it never enters the requirement document body.
+        <div class="grid-2" style="margin-top:12px">
+          <div class="field inline-mono"><label>Estimated total value (incl. options)</label>
+            <input type="text" value="${esc(state.estValue)}" placeholder="e.g., 42M" oninput="state.estValue=this.value;render()"></div>
+          <div class="field"><label>Threshold check</label>
+            <div style="padding:10px 0;font-size:13px">${a?(needsAgencyHead()
+              ?`<span style="color:var(--stop);font-weight:600">≥ ${money(a.threshold)} — agency-head approval required</span>`
+              :(state.estValue?`<span style="color:var(--ok);font-weight:600">Below ${money(a.threshold)} — CO justifies to agency head</span>`:`<span class="hint">Enter a value to test against the ${money(a.threshold)} tier</span>`)):""}</div></div>
+        </div>
+      </div>`:
+      (state.contractType==="FFP"?`<div class="callout ok" style="margin-top:14px"><h4>✓ Fixed-price — no EO 14402 justification</h4>FFP is the preferred type${["construction","ae"].includes(state.domain)?` and the norm for ${dom().label}`:""}. The contractor owns labor-mix risk, so no labor detail appears in the document body.</div>`:"")}
+  </div>
+
+  <div class="card">
+    <div class="q-label">3 · Commercial or non-commercial?</div>
+    <div class="q-help">${citeToken("commercial")} Determines FAR Part 12 vs 15 buildout.</div>
+    <div class="opts">
+      ${opt("commercial",state.commercial,"Commercial service (Part 12)","Routinely sold to the public. 52.212-4 terms apply.",'onclick="set(\'commercial\',\'commercial\')"')}
+      ${opt("noncommercial",state.commercial,"Non-commercial (Part 15)","Government-unique work. Full clause buildout.",'onclick="set(\'commercial\',\'noncommercial\')"')}
+      ${opt("unsure",state.commercial,"Unsure — flag for CO","Notes a pending determination in Section 14.",'onclick="set(\'commercial\',\'unsure\')"')}
+    </div>
+  </div>
+
+  ${navbar(!!(state.domain&&state.docType&&state.contractType&&state.commercial&&(state.contractType!=="CPFF"||state.cpffForm)))}`;
+}
+
+/* ============================ STEP: BLOCK 1 ============================ */
+function renderBlock1(){
+  const b=state.b;
+  return `
+  <div class="phase-head"><div class="eyebrow">Step 3 · Block 1</div><h2>Mission & service model</h2>
+    <p>Each choice narrows scope and quietly implies staffing — which the tool derives later and keeps out of the document. ${citeToken("results")}</p></div>
+
+  <div class="card"><div class="q-label">Service delivery model</div>
+    <div class="opts">
+      ${opt("augmentation",b.delivery,"Gov FTEs + contractor augmentation","",'onclick="setB(\'delivery\',\'augmentation\')"')}
+      ${opt("fully",b.delivery,"Fully contracted service","",'onclick="setB(\'delivery\',\'fully\')"')}
+      ${opt("hybrid",b.delivery,"Hybrid (specify functions)","",'onclick="setB(\'delivery\',\'hybrid\')"')}
+    </div></div>
+
+  <div class="card"><div class="q-label">Coverage model</div>
+    <div class="q-help">24/7 coverage triples single-shift headcount for covered roles.</div>
+    <div class="opts">
+      ${opt("bh",b.coverage,"Business hours (M–F 8–5)","",'onclick="setB(\'coverage\',\'bh\')"')}
+      ${opt("ext",b.coverage,"Extended hours","",'onclick="setB(\'coverage\',\'ext\')"')}
+      ${opt("247",b.coverage,"24/7/365","",'onclick="setB(\'coverage\',\'247\')"')}
+      ${opt("surge",b.coverage,"Seasonal / surge","",'onclick="setB(\'coverage\',\'surge\')"')}
+    </div></div>
+
+  <div class="card"><div class="q-label">Geographic scope</div>
+    <div class="opts">
+      ${opt("single",b.geo,"Single site","",'onclick="setB(\'geo\',\'single\')"')}
+      ${opt("multi",b.geo,"Multi-site","",'onclick="setB(\'geo\',\'multi\')"')}
+      ${opt("remote",b.geo,"Virtual / remote","",'onclick="setB(\'geo\',\'remote\')"')}
+      ${opt("hybrid",b.geo,"Hybrid","",'onclick="setB(\'geo\',\'hybrid\')"')}
+    </div>
+    ${b.geo==="multi"?`<div class="field"><label>How many sites?</label><input type="number" value="${esc(b.sites)}" oninput="state.b.sites=this.value"></div>`:""}
+  </div>
+
+  ${["it","services"].includes(state.domain)?"":`<div class="callout info" style="margin-top:-2px;margin-bottom:18px"><h4>Note for ${esc(dom()?dom().label:"this domain")}</h4>These general fields are optional here — schedule and site specifics are captured in the domain scope step and the period-of-performance step.</div>`}
+  ${navbar(["it","services"].includes(state.domain)?!!(b.delivery&&b.coverage&&b.geo):true)}`;
+}
+
+/* ============================ STEP: BLOCK 2 (domain dispatch) ============================ */
+function renderBlock2(){ return ({it:b2_it,services:b2_svc,construction:b2_con,ae:b2_ae,rnd:b2_rnd}[state.domain]||b2_it)(); }
+
+function b2_it(){
+  const b=state.b;
+  return `
+  <div class="phase-head"><div class="eyebrow">Step 4 · Block 2 · IT / Systems</div><h2>Technical scope</h2>
+    <p>Build/buy, integration count, migration, and AI each add specialist roles to the derived staffing.</p></div>
+
+  <div class="card"><div class="q-label">Build vs. buy</div>
+    <div class="opts">
+      ${opt("custom",b.buildbuy,"Custom development","1 architect + 2–4 devs per system",'onclick="setB(\'buildbuy\',\'custom\')"')}
+      ${opt("cots",b.buildbuy,"COTS / SaaS configuration","1 architect + 1–2 configurators",'onclick="setB(\'buildbuy\',\'cots\')"')}
+      ${opt("hybrid",b.buildbuy,"Hybrid (custom on COTS)","",'onclick="setB(\'buildbuy\',\'hybrid\')"')}
+    </div></div>
+
+  <div class="card"><div class="q-label">Systems in scope</div>
+    <div class="field"><label>List systems to build, configure, integrate, or maintain</label>
+      <textarea placeholder="e.g., ServiceNow ITSM (existing), custom triage API (new)…" oninput="state.b.systems=this.value">${esc(b.systems)}</textarea></div>
+  </div>
+
+  <div class="card"><div class="q-label">Integration complexity</div>
+    <div class="opts">
+      ${opt("standalone",b.integration,"Standalone","",'onclick="setB(\'integration\',\'standalone\')"')}
+      ${opt("few",b.integration,"1–3 systems","",'onclick="setB(\'integration\',\'few\')"')}
+      ${opt("many",b.integration,"4+ systems","+1–2 integration engineers",'onclick="setB(\'integration\',\'many\')"')}
+      ${opt("enterprise",b.integration,"Enterprise-wide","+integration engineers",'onclick="setB(\'integration\',\'enterprise\')"')}
+    </div></div>
+
+  <div class="card"><div class="q-label">Data migration</div>
+    <div class="opts">
+      ${opt("none",b.migration,"No legacy data","",'onclick="setB(\'migration\',\'none\')"')}
+      ${opt("small",b.migration,"1–2 sources","",'onclick="setB(\'migration\',\'small\')"')}
+      ${opt("large",b.migration,"3+ sources","+1 data engineer + 1 DBA",'onclick="setB(\'migration\',\'large\')"')}
+      ${opt("complex",b.migration,"Multi-system consolidation","",'onclick="setB(\'migration\',\'complex\')"')}
+    </div></div>
+
+  <div class="card"><div class="q-label">AI / automation</div>
+    <div class="opts">
+      ${opt("none",b.ai,"None","",'onclick="setB(\'ai\',\'none\')"')}
+      ${opt("basic",b.ai,"Basic (IVR, rules routing)","",'onclick="setB(\'ai\',\'basic\')"')}
+      ${opt("assisted",b.ai,"AI-assisted (NLP, ML)","+1–2 data scientists",'onclick="setB(\'ai\',\'assisted\')"')}
+      ${opt("advanced",b.ai,"Advanced (chatbots, predictive)","+data scientists",'onclick="setB(\'ai\',\'advanced\')"')}
+    </div></div>
+
+  ${navbar(!!(b.buildbuy&&b.integration&&b.migration&&b.ai))}`;
+}
+
+/* --- Block 2: Services --- */
+function b2_svc(){
+  const b=state.b;
+  return `
+  <div class="phase-head"><div class="eyebrow">Step 4 · Block 2 · Services</div><h2>Service scope</h2>
+    <p>Service functions and labor standards drive the derived roles. Non-personal, non-inherently-governmental. ${citeToken("svc_part")}</p></div>
+
+  <div class="card"><div class="q-label">Service functions in scope</div>
+    <div class="field"><label>List the functions the contractor will perform</label>
+      <textarea placeholder="e.g., mailroom & records mgmt, help desk, grounds maintenance, program analysis support…" oninput="state.b.svcFunctions=this.value">${esc(b.svcFunctions)}</textarea></div>
+  </div>
+
+  <div class="card"><div class="q-label">Service Contract Labor Standards (SCA)</div>
+    <div class="q-help">Do any positions use service employees (non-exempt)? If so, a DOL wage determination attaches. ${citeToken("sca")}</div>
+    <div class="opts">
+      ${opt("yes",b.svcSca,"Yes — SCA applies","Wage determination + 52.222-41 in the solicitation",'onclick="setB(\'svcSca\',\'yes\')"')}
+      ${opt("exempt",b.svcSca,"Exempt (bona fide professional)","e.g., professional/analyst services",'onclick="setB(\'svcSca\',\'exempt\')"')}
+      ${opt("unsure",b.svcSca,"Unsure — flag for CO","",'onclick="setB(\'svcSca\',\'unsure\')"')}
+    </div>
+  </div>
+
+  <div class="card"><div class="q-label">Nature of the services</div>
+    <div class="q-help">Personal services are generally prohibited absent authority. ${citeToken("pers_svc")}</div>
+    <div class="opts">
+      ${opt("nonpersonal",b.svcPersonal,"Non-personal services","No employer-employee relationship with the Government",'onclick="setB(\'svcPersonal\',\'nonpersonal\')"')}
+      ${opt("review",b.svcPersonal,"Needs review","Some day-to-day direction — flag for CO",'onclick="setB(\'svcPersonal\',\'review\')"')}
+    </div>
+    ${b.svcPersonal==="review"?`<div class="callout warn" style="margin-top:12px"><h4>⚠ Personal-services risk</h4>If the Government would directly supervise contractor staff, this may be an improper personal-services contract. Flagged in Section 14.</div>`:""}
+  </div>
+
+  <div class="card"><div class="q-label">Surge / variable demand</div>
+    <div class="opts">
+      ${opt("steady",b.svcSurge,"Steady level of effort","",'onclick="setB(\'svcSurge\',\'steady\')"')}
+      ${opt("surge",b.svcSurge,"Periodic surge","+supervisory & flex staffing",'onclick="setB(\'svcSurge\',\'surge\')"')}
+    </div>
+  </div>
+
+  ${navbar(!!b.svcSca)}`;
+}
+
+/* --- Block 2: Construction --- */
+function b2_con(){
+  const b=state.b;
+  return `
+  <div class="phase-head"><div class="eyebrow">Step 4 · Block 2 · Construction</div><h2>Project scope</h2>
+    <p>Part 36 project. Drafted as an SOW referencing drawings & specifications, with the construction compliance stack. ${citeToken("con_part")}</p></div>
+
+  <div class="card"><div class="q-label">Project type</div>
+    <div class="opts">
+      ${opt("new",b.conType,"New construction","",'onclick="setB(\'conType\',\'new\')"')}
+      ${opt("reno",b.conType,"Renovation / alteration","",'onclick="setB(\'conType\',\'reno\')"')}
+      ${opt("repair",b.conType,"Repair / maintenance","",'onclick="setB(\'conType\',\'repair\')"')}
+    </div>
+  </div>
+
+  <div class="card"><div class="q-label">Delivery method</div>
+    <div class="opts">
+      ${opt("dbb",b.conDelivery,"Design-Bid-Build","Complete design provided; sealed bidding common",'onclick="setB(\'conDelivery\',\'dbb\')"')}
+      ${opt("db",b.conDelivery,"Design-Build","Contractor designs & builds",'onclick="setB(\'conDelivery\',\'db\')"')}
+      ${opt("twophase",b.conDelivery,"Two-phase design-build","FAR 36.3 selection",'onclick="setB(\'conDelivery\',\'twophase\')"')}
+    </div>
+  </div>
+
+  <div class="card"><div class="q-label">Magnitude of construction ${citeToken("magnitude")}</div>
+    <div class="q-help">Disclose the price <b>range</b>, not the Government estimate.</div>
+    <div class="opts">
+      ${opt("r1",b.conMagnitude,"< $25,000","",'onclick="setB(\'conMagnitude\',\'r1\')"')}
+      ${opt("r2",b.conMagnitude,"$25K – $100K","",'onclick="setB(\'conMagnitude\',\'r2\')"')}
+      ${opt("r3",b.conMagnitude,"$100K – $250K","",'onclick="setB(\'conMagnitude\',\'r3\')"')}
+      ${opt("r4",b.conMagnitude,"$250K – $500K","",'onclick="setB(\'conMagnitude\',\'r4\')"')}
+      ${opt("r5",b.conMagnitude,"$500K – $1M","",'onclick="setB(\'conMagnitude\',\'r5\')"')}
+      ${opt("r6",b.conMagnitude,"$1M – $5M","",'onclick="setB(\'conMagnitude\',\'r6\')"')}
+      ${opt("r7",b.conMagnitude,"$5M – $10M","",'onclick="setB(\'conMagnitude\',\'r7\')"')}
+      ${opt("r8",b.conMagnitude,"Over $10M","",'onclick="setB(\'conMagnitude\',\'r8\')"')}
+    </div>
+  </div>
+
+  <div class="card"><div class="q-label">Bonding ${citeToken("miller")}</div>
+    <div class="opts">
+      ${opt("miller",b.conBond,"Miller Act bonds required","Performance & payment (> threshold)",'onclick="setB(\'conBond\',\'miller\')"')}
+      ${opt("alt",b.conBond,"Alternative payment protection","Below threshold",'onclick="setB(\'conBond\',\'alt\')"')}
+    </div>
+    <div class="q-label" style="margin-top:16px">Site & sustainability</div>
+    <div class="field"><label>Site conditions / phasing notes</label>
+      <input type="text" value="${esc(b.conSite)}" placeholder="e.g., occupied facility, phased by wing, hazmat abatement" oninput="state.b.conSite=this.value"></div>
+    <div class="opts" style="margin-top:12px">
+      ${opt("leed",b.conSustain,"Sustainability / LEED required","",'onclick="setB(\'conSustain\',\'leed\')"')}
+      ${opt("none",b.conSustain,"No specific rating","",'onclick="setB(\'conSustain\',\'none\')"')}
+    </div>
+  </div>
+
+  ${navbar(!!(b.conType&&b.conDelivery&&b.conMagnitude))}`;
+}
+
+/* --- Block 2: A/E --- */
+function b2_ae(){
+  const b=state.b, phases=b.aePhases||[];
+  const tog=p=>`onclick="toggleAePhase('${p}')"`;
+  const ph=(p,t)=>`<button class="opt ${phases.includes(p)?'sel':''}" ${tog(p)} tabindex="0"><span class="t">${t}</span></button>`;
+  return `
+  <div class="phase-head"><div class="eyebrow">Step 4 · Block 2 · Architect-Engineer</div><h2>Design scope</h2>
+    <p>Qualifications-based selection under the Brooks Act; design fee is capped at ${aeFeePct()}% of estimated construction cost. ${citeToken("brooks")}</p></div>
+
+  <div class="card"><div class="q-label">Design phases in scope</div>
+    <div class="q-help">Select all that apply — these become Section 3 submittal milestones.</div>
+    <div class="opts">
+      ${ph("schematic","Schematic Design")}
+      ${ph("dd","Design Development")}
+      ${ph("cd","Construction Documents")}
+      ${ph("bidding","Bidding / Procurement Support")}
+      ${ph("ca","Construction Administration")}
+    </div>
+  </div>
+
+  <div class="card"><div class="q-label">Disciplines required</div>
+    <div class="field"><label>List the design disciplines</label>
+      <input type="text" value="${esc(b.aeDisciplines)}" placeholder="e.g., architecture, structural, civil, mechanical, electrical, plumbing, cost estimating" oninput="state.b.aeDisciplines=this.value"></div>
+  </div>
+
+  <div class="card"><div class="q-label">Basis of fee ${citeToken("aefee")}</div>
+    <div class="grid-2">
+      <div class="field inline-mono"><label>Estimated construction cost (ECC)</label>
+        <input type="text" value="${esc(b.aeConstCost)}" placeholder="e.g., 30M" oninput="state.b.aeConstCost=this.value;render()"></div>
+      <div class="field"><label>${aeFeePct()}% design-fee ceiling on ECC</label>
+        <div style="padding:10px 0;font-size:14px" class="mono">${b.aeConstCost?money(parseMoney(b.aeConstCost)*aeFeePct()/100)+` max`:`<span class="hint" style="font-family:var(--sans)">Enter ECC to compute the cap</span>`}</div></div>
+    </div>
+    <div class="opts" style="margin-top:6px">
+      ${opt("yes",b.aeInvestigative,"Includes investigative/feasibility work","Excluded from the fee cap",'onclick="setB(\'aeInvestigative\',\'yes\')"')}
+      ${opt("no",b.aeInvestigative,"Design production only","Fully within the cap",'onclick="setB(\'aeInvestigative\',\'no\')"')}
+    </div>
+    <p class="hint">The ${aeFeePct()}% cap applies to producing & delivering designs, plans, drawings, and specifications. Investigative, feasibility, surveys, and similar services are excluded.</p>
+  </div>
+
+  ${navbar(!!(phases.length && b.aeConstCost!==""))}`;
+}
+function toggleAePhase(p){ const a=state.b.aePhases||(state.b.aePhases=[]); const i=a.indexOf(p); i>=0?a.splice(i,1):a.push(p); render(); }
+
+/* --- Block 2: R&D --- */
+function b2_rnd(){
+  const b=state.b;
+  return `
+  <div class="phase-head"><div class="eyebrow">Step 4 · Block 2 · Research & Development</div><h2>Research scope</h2>
+    <p>Described in terms of the research objective, not a guaranteed end product. ${citeToken("rnd_part")}</p></div>
+
+  <div class="card"><div class="q-label">R&D category</div>
+    <div class="opts">
+      ${opt("basic",b.rdType,"Basic research","Fundamental knowledge; outcome open-ended",'onclick="setB(\'rdType\',\'basic\')"')}
+      ${opt("applied",b.rdType,"Applied research","Directed at a specific need",'onclick="setB(\'rdType\',\'applied\')"')}
+      ${opt("development",b.rdType,"Development","Prototypes, maturation, test articles",'onclick="setB(\'rdType\',\'development\')"')}
+    </div>
+  </div>
+
+  <div class="card"><div class="q-label">Research objective</div>
+    <div class="field"><label>State the objective / problem — not a prescribed solution</label>
+      <textarea placeholder="e.g., Investigate and mature a low-power sensing approach to TRL 5…" oninput="state.b.rdObjective=this.value">${esc(b.rdObjective)}</textarea></div>
+  </div>
+
+  <div class="card"><div class="q-label">Effort basis</div>
+    <div class="opts">
+      ${opt("loe",b.rdEffort,"Level of effort (term)","Effort over a period; results not guaranteed",'onclick="setB(\'rdEffort\',\'loe\')"')}
+      ${opt("completion",b.rdEffort,"Defined end item (completion)","Bounded deliverable / prototype",'onclick="setB(\'rdEffort\',\'completion\')"')}
+    </div>
+    <div class="q-label" style="margin-top:16px">Deliverables & data rights ${citeToken("datarights")}</div>
+    <div class="opts">
+      ${opt("proto",b.rdProto,"Prototype / hardware + reports","",'onclick="setB(\'rdProto\',\'proto\')"')}
+      ${opt("reports",b.rdProto,"Reports & data only","",'onclick="setB(\'rdProto\',\'reports\')"')}
+    </div>
+    <div class="opts" style="margin-top:12px">
+      ${opt("govt",b.rdData,"Government purpose / unlimited rights","",'onclick="setB(\'rdData\',\'govt\')"')}
+      ${opt("limited",b.rdData,"Limited / restricted rights asserted","Contractor-funded IP",'onclick="setB(\'rdData\',\'limited\')"')}
+      ${opt("tbd",b.rdData,"To be negotiated","",'onclick="setB(\'rdData\',\'tbd\')"')}
+    </div>
+  </div>
+
+  ${navbar(!!(b.rdType&&b.rdEffort))}`;
+}
+
+/* ============================ STEP: BLOCK 3 ============================ */
+function renderBlock3(){ return ({it:b3_it,services:b3_svc}[state.domain]||b3_generic)(); }
+
+function b3_it(){
+  const b=state.b;
+  return `
+  <div class="phase-head"><div class="eyebrow">Step 5 · Block 3 · IT / Systems</div><h2>Scale & volume</h2>
+    <p>Volume drives the contact-center derivation: contacts ÷ 250 days ÷ contacts-per-agent-per-day = agent headcount.</p></div>
+
+  <div class="card"><div class="q-label">Transaction / contact volume</div>
+    <div class="field"><label>Annual volume (numbers if known, else low/medium/high)</label>
+      <input type="text" value="${esc(b.volume)}" placeholder="e.g., 127,000 contacts/year" oninput="state.b.volume=this.value"></div>
+    <p class="hint">If a number is present, the tool estimates agents at ~40 contacts/agent/day. Override any derived figure at the next step.</p>
+  </div>
+
+  <div class="card"><div class="q-label">User population</div>
+    <div class="opts">
+      ${opt("internal",b.users,"Internal users","",'onclick="setB(\'users\',\'internal\')"')}
+      ${opt("external",b.users,"External / public-facing","",'onclick="setB(\'users\',\'external\')"')}
+      ${opt("both",b.users,"Both","",'onclick="setB(\'users\',\'both\')"')}
+    </div></div>
+
+  <div class="card"><div class="q-label">Growth expectations</div>
+    <div class="opts">
+      ${opt("stable",b.growth,"Stable","",'onclick="setB(\'growth\',\'stable\')"')}
+      ${opt("moderate",b.growth,"Moderate (10–25%/yr)","",'onclick="setB(\'growth\',\'moderate\')"')}
+      ${opt("high",b.growth,"High (>25%/yr)","",'onclick="setB(\'growth\',\'high\')"')}
+      ${opt("unknown",b.growth,"Unknown","",'onclick="setB(\'growth\',\'unknown\')"')}
+    </div></div>
+
+  ${navbar(b.volume!=="" && !!b.users)}`;
+}
+
+/* --- Block 3: Services --- */
+function b3_svc(){
+  const b=state.b;
+  return `
+  <div class="phase-head"><div class="eyebrow">Step 5 · Block 3 · Services</div><h2>Workload & scale</h2>
+    <p>Workload drives supervisory ratios and the derived labor mix.</p></div>
+  <div class="card"><div class="q-label">Workload volume</div>
+    <div class="field"><label>Characterize the workload (numbers if known)</label>
+      <input type="text" value="${esc(b.svcWorkload)}" placeholder="e.g., 40,000 transactions/yr; 1.2M sq ft; 8,000 personnel served" oninput="state.b.svcWorkload=this.value"></div>
+  </div>
+  <div class="card"><div class="q-label">Population served</div>
+    <div class="opts">
+      ${opt("internal",b.users,"Internal / agency staff","",'onclick="setB(\'users\',\'internal\')"')}
+      ${opt("external",b.users,"External / public","",'onclick="setB(\'users\',\'external\')"')}
+      ${opt("both",b.users,"Both","",'onclick="setB(\'users\',\'both\')"')}
+    </div>
+    <div class="q-label" style="margin-top:16px">Growth expectations</div>
+    <div class="opts">
+      ${opt("stable",b.growth,"Stable","",'onclick="setB(\'growth\',\'stable\')"')}
+      ${opt("moderate",b.growth,"Moderate (10–25%/yr)","",'onclick="setB(\'growth\',\'moderate\')"')}
+      ${opt("high",b.growth,"High (>25%/yr)","",'onclick="setB(\'growth\',\'high\')"')}
+    </div>
+  </div>
+  ${navbar(true)}`;
+}
+
+/* --- Block 3: generic (construction / A/E / R&D) --- */
+function b3_generic(){
+  const b=state.b, d=state.domain;
+  const label = {construction:"Facilities / site scale",ae:"Project scale & buildings",rnd:"Scope of effort / phases"}[d]||"Scale";
+  const help = {construction:"e.g., single 3-story building, 45,000 GSF; occupied campus, 4 sites",ae:"e.g., one new headquarters, ~120,000 GSF across 2 phases",rnd:"e.g., 3 research thrusts over 24 months; 2 prototype builds"}[d]||"";
+  return `
+  <div class="phase-head"><div class="eyebrow">Step 5 · Block 3 · ${esc(dom()?dom().label:"")}</div><h2>Workload & scale</h2>
+    <p>Captured for the derivation and Section 3 context; period of performance is set in the next step.</p></div>
+  <div class="card"><div class="q-label">${esc(label)}</div>
+    <div class="field"><label>Describe the scale/context</label>
+      <input type="text" value="${esc(b.svcWorkload)}" placeholder="${esc(help)}" oninput="state.b.svcWorkload=this.value"></div>
+    ${d==="construction"?`<p class="hint">Number of distinct sites also affects superintendent/QC coverage in the derived roles.</p>`:""}
+  </div>
+  ${navbar(true)}`;
+}
+
+/* ============================ STEP: BLOCK 4-6 ============================ */
+function renderBlock4(){
+  const b=state.b;
+  return `
+  <div class="phase-head"><div class="eyebrow">Step 6 · Blocks 4–6</div><h2>Structure & oversight</h2>
+    <p>Period, CLIN preference (for the Section B handoff — never the document body), and quality metrics.</p></div>
+
+  <div class="card"><div class="q-label">Organizational scope</div>
+    <div class="field"><label>How many organizational units served?</label><input type="number" value="${esc(b.orgunits)}" placeholder="offices / centers / divisions" oninput="state.b.orgunits=this.value"></div>
+    <div class="q-label" style="margin-top:16px">Phasing</div>
+    <div class="opts">
+      ${opt("all",b.phasing,"All at once","",'onclick="setB(\'phasing\',\'all\')"')}
+      ${opt("phased",b.phasing,"Phased rollout","",'onclick="setB(\'phasing\',\'phased\')"')}
+      ${opt("pilot",b.phasing,"Pilot then expand","",'onclick="setB(\'phasing\',\'pilot\')"')}
+    </div>
+  </div>
+
+  <div class="card"><div class="q-label">Period of performance</div>
+    <div class="grid-2">
+      <div class="field"><label>Structure</label>
+        <div class="opts" style="grid-template-columns:1fr">
+          ${opt("base_oy",b.pop,"Base year + option years","",'onclick="setB(\'pop\',\'base_oy\')"')}
+          ${opt("base",b.pop,"Base year only","",'onclick="setB(\'pop\',\'base\')"')}
+        </div></div>
+      ${b.pop==="base_oy"?`<div class="field"><label>Number of option years</label><input type="number" value="${esc(b.oy)}" oninput="state.b.oy=this.value"></div>`:""}
+    </div>
+    <div class="q-label" style="margin-top:16px">Base year scope</div>
+    <div class="opts">
+      ${opt("full",b.basescope,"Full performance from day 1","",'onclick="setB(\'basescope\',\'full\')"')}
+      ${opt("rampup",b.basescope,"Transition-in / ramp-up","+0.5–1 FTE knowledge transfer",'onclick="setB(\'basescope\',\'rampup\')"')}
+      ${opt("dev",b.basescope,"Design/dev only; production in options","",'onclick="setB(\'basescope\',\'dev\')"')}
+    </div>
+    <div class="q-label" style="margin-top:16px">Transition requirements</div>
+    <div class="opts">
+      ${opt("in",b.transition,"Transition-in from incumbent","",'onclick="setB(\'transition\',\'in\')"')}
+      ${opt("out",b.transition,"Transition-out plan","",'onclick="setB(\'transition\',\'out\')"')}
+      ${opt("both",b.transition,"Both","",'onclick="setB(\'transition\',\'both\')"')}
+    </div>
+  </div>
+
+  <div class="card"><div class="q-label">CLIN structure preference</div>
+    <div class="q-help">For the Section B handoff table only. CLINs never appear in the SOW/PWS body.</div>
+    <div class="opts">
+      ${opt("period",b.clin,"By period","base / OY1 / OY2 …",'onclick="setB(\'clin\',\'period\')"')}
+      ${opt("function",b.clin,"By function","dev / ops / maintenance / training",'onclick="setB(\'clin\',\'function\')"')}
+      ${opt("deliverable",b.clin,"By deliverable","each major deliverable = a CLIN",'onclick="setB(\'clin\',\'deliverable\')"')}
+      ${opt("unsure",b.clin,"Unsure — recommend","tool defaults to by-period",'onclick="setB(\'clin\',\'unsure\')"')}
+    </div>
+  </div>
+
+  <div class="card"><div class="q-label">Quality & oversight</div>
+    <div class="field"><label>Acceptable Quality Level(s) for key metrics ${citeToken("qa")}</label>
+      <input type="text" value="${esc(b.aql)}" placeholder="e.g., 95% first-contact resolution; 99.9% uptime" oninput="state.b.aql=this.value"></div>
+    <div class="q-label" style="margin-top:16px">Reporting cadence</div>
+    <div class="opts">
+      ${opt("weekly",b.reporting,"Weekly","",'onclick="setB(\'reporting\',\'weekly\')"')}
+      ${opt("monthly",b.reporting,"Monthly","",'onclick="setB(\'reporting\',\'monthly\')"')}
+      ${opt("quarterly",b.reporting,"Quarterly","",'onclick="setB(\'reporting\',\'quarterly\')"')}
+      ${opt("asneeded",b.reporting,"As-needed","",'onclick="setB(\'reporting\',\'asneeded\')"')}
+    </div>
+    <div class="field" style="margin-top:16px"><label>Key personnel roles (PM always; add others)</label>
+      <input type="text" value="${esc(state.keyPersonnel)}" placeholder="Program Manager, Technical Lead, ISSO" oninput="state.keyPersonnel=this.value;state.keyEdited=true"></div>
+  </div>
+
+  ${navbar(!!(b.pop&&b.basescope&&b.transition&&b.clin&&b.reporting),"Derive staffing")}`;
+}
+
+/* ============================ DERIVATION (domain dispatch) ============================ */
+function deriveStaffing(){
+  return ({it:derive_it,services:derive_svc,construction:derive_con,ae:derive_ae,rnd:derive_rnd}[state.domain]||derive_it)();
+}
+function lastPhaseLabel(){ const oy=state.b.pop==="base_oy"?(parseInt(state.b.oy)||0):0; return oy>0?`Base–OY${oy}`:"Base"; }
+function mkAdd(rows){ return (lcat,soc,ftes,phase,notes)=>rows.push({lcat,soc,ftes:String(ftes),phase,hrs:"1,880",notes}); }
+
+function derive_it(){
+  const b=state.b, rows=[], add=mkAdd(rows), lp=lastPhaseLabel();
+  const oy = b.pop==="base_oy" ? (parseInt(b.oy)||0) : 0;
+  add("Program Manager","13-1082",1,lp,"Key personnel");
+  if(b.buildbuy==="custom"||b.buildbuy==="hybrid"){ add("Solution Architect","15-1241",1,oy>0?"Base–OY1":"Base","Custom development"); add("Software Developer","15-1252",4,oy>0?"Base–OY1":"Base","2 Agile teams × 2 devs; reduces in O&M"); }
+  if(b.buildbuy==="cots"||b.buildbuy==="hybrid") add("Systems Configurator","15-1244",2,lp,"COTS/SaaS configuration");
+  if(b.ai==="assisted"||b.ai==="advanced") add("Data Scientist / ML Engineer","15-2051",2,lp,"AI/NLP components");
+  if(b.integration==="many"||b.integration==="enterprise") add("Integration Engineer","15-1299",2,lp,"4+ system integrations");
+  if(b.migration==="large"||b.migration==="complex"){ add("Data Engineer","15-2051",1,"Base","3+ source migration (time-limited)"); add("Database Administrator","15-1242",1,"Base","Migration support"); }
+  const num=parseInt((b.volume||"").replace(/[^0-9]/g,""));
+  if(num&&num>1000){ let agents=Math.max(1,Math.round(num/250/40)); if(b.coverage==="247")agents*=3; else if(b.coverage==="ext")agents=Math.round(agents*1.5); add("Tier 1 Agent","43-4051",agents,lp,`${b.volume} ÷ 250 days ÷ 40/day${b.coverage==="247"?" × 3 (24/7)":""}`); }
+  const units=parseInt(b.orgunits);
+  if(b.geo==="multi"||(units&&units>=3)) add("Change Mgmt / Training Specialist","13-1151",1,lp,"Multi-site or 3+ org units");
+  add("Information Security Analyst","15-1212",1,lp,"FISMA / safeguarding support");
+  if(b.basescope==="rampup"||b.transition==="in"||b.transition==="both") add("Transition Lead","13-1082","0.5","Base","Knowledge transfer (time-limited)");
+  return rows;
+}
+
+function derive_svc(){
+  const b=state.b, rows=[], add=mkAdd(rows), lp=lastPhaseLabel();
+  add("Program Manager","13-1082",1,lp,"Key personnel");
+  add("Quality Control Manager","13-1041",1,lp,"QASP surveillance");
+  const num=parseInt((b.svcWorkload||"").replace(/[^0-9]/g,""));
+  let line=2;
+  if(num){ if(num>=100000)line=8; else if(num>=25000)line=5; else if(num>=5000)line=3; }
+  if(b.coverage==="247") line*=3; else if(b.coverage==="ext") line=Math.round(line*1.5);
+  add("Functional Supervisor","43-1011",Math.max(1,Math.round(line/8)),lp,"~1 per 8 line staff");
+  add(b.svcSca==="yes"?"Service Specialist (SCA-covered)":"Service Specialist","43-9061",line,lp,`Derived from workload${b.svcSca==="yes"?"; SCA wage determination applies":""}`);
+  if(b.svcSurge==="surge") add("Surge / Flex Staff","43-9061","2",lp,"Periodic surge (variable)");
+  if(b.basescope==="rampup"||b.transition==="in"||b.transition==="both") add("Transition Lead","13-1082","0.5","Base","Phase-in (time-limited)");
+  return rows;
+}
+
+function derive_con(){
+  const b=state.b, rows=[], add=mkAdd(rows);
+  add("Project Manager","11-9021",1,"Base","Key personnel");
+  add("Site Superintendent","11-9021",1,"Base","On-site supervision; key personnel");
+  add("Quality Control Manager","11-9021",1,"Base","CQC per contract; key personnel");
+  add("Site Safety & Health Officer","13-1151",1,"Base","EM 385-1-1 / OSHA compliance");
+  if(b.conDelivery==="db"||b.conDelivery==="twophase") add("Design Manager (DB)","17-1011","0.5","Base","Design-build coordination");
+  add("Craft / Trade Labor","47-0000","—","Base","Priced in subcontracts per Davis-Bacon wage determination — not an FTE count");
+  return rows;
+}
+
+function derive_ae(){
+  const b=state.b, rows=[], add=mkAdd(rows);
+  add("Principal-in-Charge","17-1011","0.25","Base","Firm accountability; key personnel");
+  add("Project Manager","17-1011",1,"Base","Key personnel");
+  const disc=(b.aeDisciplines||"").split(/[,;\n]/).map(s=>s.trim()).filter(Boolean);
+  const socMap={architect:"17-1011",architecture:"17-1011",structural:"17-2051",civil:"17-2051",mechanical:"17-2141",electrical:"17-2071",plumbing:"17-2141","cost estimating":"13-1051",estimating:"13-1051"};
+  (disc.length?disc:["Architecture","Structural","Mechanical","Electrical"]).forEach(dn=>{
+    const soc=socMap[dn.toLowerCase()]||"17-2199";
+    add(`${dn} Lead`,soc,1,"Base","Discipline lead");
+  });
+  add("Designer / CAD-BIM","17-3011",2,"Base","Production");
+  add("Specifications Writer","17-1011","0.5","Base","Specs");
+  if(b.aePhases&&b.aePhases.includes("ca")) add("Construction Admin","17-1011",1,"Base","CA phase support");
+  return rows;
+}
+
+function derive_rnd(){
+  const b=state.b, rows=[], add=mkAdd(rows), lp=lastPhaseLabel();
+  add("Principal Investigator","19-2099",1,lp,"Key personnel; LOE basis");
+  if(b.rdType!=="development") add("Co-Investigator","19-2099",1,lp,"Research direction");
+  add("Research Scientist / Engineer","17-2199",b.rdType==="development"?3:2,lp,"Core research staff (level of effort)");
+  if(b.rdProto==="proto"||b.rdType==="development"){ add("Research Engineer (proto)","17-2199",1,lp,"Prototype build & test"); add("Laboratory Technician","19-4099",1,lp,"Test & fabrication"); }
+  add("Data Manager","15-1243","0.5",lp,"Technical data & reporting");
+  return rows;
+}
+function buildStaffing(){ state.staffing=deriveStaffing(); state.staffingBuilt=true; render(); }
+
+function renderStaffing(){
+  if(!state.staffingBuilt){
+    return `<div class="phase-head"><div class="eyebrow">Step 7 · Validation gate</div><h2>Derived staffing</h2>
+      <p>The tool applies the derivation heuristics to your scope decisions. You confirm or override every line before assembly — overrides are captured for the IGCE methodology narrative. This table is an internal workpaper; it never enters the document.</p></div>
+      <div class="card" style="text-align:center;padding:40px">
+        <button class="btn primary" onclick="buildStaffing()">Derive staffing from decisions →</button>
+      </div>${navbar(false)}`;
+  }
+  const rows=state.staffing.map((r,i)=>`<tr>
+    <td><input class="tbl-input" value="${esc(r.lcat)}" oninput="state.staffing[${i}].lcat=this.value"></td>
+    <td><input class="tbl-input mono" value="${esc(r.soc)}" oninput="state.staffing[${i}].soc=this.value" style="font-family:var(--mono)"></td>
+    <td style="width:64px"><input class="tbl-input mono" value="${esc(r.ftes)}" oninput="state.staffing[${i}].ftes=this.value" style="font-family:var(--mono)"></td>
+    <td><input class="tbl-input" value="${esc(r.phase)}" oninput="state.staffing[${i}].phase=this.value"></td>
+    <td><input class="tbl-input" value="${esc(r.notes)}" oninput="state.staffing[${i}].notes=this.value"></td>
+    <td style="width:34px"><button class="row-del" title="Remove" onclick="state.staffing.splice(${i},1);render()">×</button></td>
+  </tr>`).join("");
+  const total=state.staffing.reduce((s,r)=>s+(parseFloat(r.ftes)||0),0);
+  return `<div class="phase-head"><div class="eyebrow">Step 7 · Validation gate</div><h2>Derived staffing</h2>
+    <p>Confirm, adjust, or override any line. This is the data handoff to the IGCE Builder — it lives in chat/workpaper only and is <b>never</b> written into the SOW/PWS.</p></div>
+    <div class="workpaper-banner">⚑ <div><b>Internal government workpaper.</b> Not part of the contract deliverable. FTE counts and SOC codes are barred from the document body under ${citeText("results")} — that's why they live here.</div></div>
+    <div class="card" style="padding:14px 16px">
+      <table class="grid"><thead><tr><th>Labor category</th><th>SOC</th><th>FTEs</th><th>Phase</th><th>Notes / derivation</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <button class="btn" onclick="state.staffing.push({lcat:'New role',soc:'00-0000',ftes:'1',phase:'Base',hrs:'1,880',notes:''});render()">+ Add role</button>
+        <div style="font-family:var(--mono);font-size:13px;color:var(--muted)">Derived total ≈ <b style="color:var(--text)">${total.toFixed(total%1?1:0)}</b> FTE</div>
+      </div>
+      ${total>50?`<div class="callout warn" style="margin-top:12px"><h4>⚠ Scope flag</h4>Derived effort exceeds 50 FTE — consider whether this should break into multiple contracts (e.g., development vs. operations).</div>`:""}
+    </div>
+    ${navbar(true,"Review decision summary")}`;
+}
+
+/* ============================ STEP: SUMMARY (assembly gate) ============================ */
+function renderSummary(){
+  const a=agency(), b=state.b;
+  const defaults=collectDefaults();
+  return `<div class="phase-head"><div class="eyebrow">Step 8 · Assembly gate</div><h2>Decision summary</h2>
+    <p>A catch point before a large document locks in framing errors. Review the derived defaults; if anything's wrong, go back and fix it. Nothing generates until you approve.</p></div>
+
+  <div class="card">
+    <h3 style="font-size:14px;margin-bottom:12px">Framing</h3>
+    <table class="grid"><tbody>
+      <tr><td style="width:200px;color:var(--muted)">Regime</td><td>${state.regime==="rfo"?`RFO under ${esc(a.devSeries)}${state.devNo?` · <span class="mono">${esc(state.devNo)}</span>`:""}`:"Codified FAR (legacy)"}</td></tr>
+      <tr><td style="color:var(--muted)">Agency</td><td>${esc(a.name)} · threshold <span class="mono">${money(a.threshold)}</span></td></tr>
+      <tr><td style="color:var(--muted)">Domain</td><td>${esc(dom()?dom().label:"—")}${state.domain==="ae"?` · ${aeFeePct()}% fee cap`:""}${state.domain==="construction"?` · magnitude ${magnitudeText(state.b.conMagnitude)}`:""}</td></tr>
+      <tr><td style="color:var(--muted)">Document</td><td>${state.docType}${state.docType==="PWS"?" — performance-based":" — task-based"}</td></tr>
+      <tr><td style="color:var(--muted)">Contract type</td><td>${contractLabel()} ${isCovered()?`<span class="badge-pill" style="color:var(--warn)">covered · 16.104</span>`:`<span class="badge-pill" style="color:var(--ok)">fixed-price</span>`}</td></tr>
+      <tr><td style="color:var(--muted)">Commercial</td><td>${{commercial:"Commercial (FAR Part 12)",noncommercial:"Non-commercial (FAR Part 15)",unsure:"Determination pending — flagged for CO"}[state.commercial]}</td></tr>
+      <tr><td style="color:var(--muted)">Period</td><td>${b.pop==="base_oy"?`Base + ${b.oy} option years`:"Base year only"}</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:14px;margin-bottom:6px">Applied defaults <span class="hint" style="font-weight:400">— each becomes a [DEFAULT] row in Section 14 for CO confirmation</span></h3>
+    <table class="grid"><thead><tr><th>Default applied</th><th>Rationale</th></tr></thead>
+    <tbody>${defaults.map(d=>`<tr><td>${esc(d.t)}</td><td style="color:var(--muted)">${esc(d.r)}</td></tr>`).join("")}</tbody></table>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:14px;margin-bottom:6px">Section 3 structure</h3>
+    <p style="font-size:13px;color:var(--muted);margin-top:4px">${
+      state.domain==="construction"?"Scope of work referencing drawings & specifications, with magnitude, wage determination, and (if applicable) bonding sections.":
+      state.domain==="ae"?"Design services organized by selected phase, with a basis-of-fee section and Brooks Act procurement method.":
+      state.domain==="rnd"?"Organized around the research objective and approach, with data-rights and technical-reporting sections.":
+      state.docType==="PWS"?"Organized by performance objective — required outcome, performance standard, AQL, method of assessment.":"Organized by task area — task description, subtasks, deliverables, GFP/GFI."
+    }</p>
+  </div>
+
+  <div class="callout info"><h4>This gate does not self-approve</h4>Generation only runs when you click below. If a default is wrong, use Back to correct it first.</div>
+
+  <div class="navbar">
+    <button class="btn ghost" onclick="prev()">← Back</button>
+    <button class="btn primary" onclick="approveAndGenerate()">Approve & assemble document →</button>
+  </div>`;
+}
+function approveAndGenerate(){ state.summaryApproved=true; state.generated=true; state.step=8; state.wsTab="doc"; window.scrollTo(0,0); render(); }
+
+function contractLabel(){ return {FFP:"Firm-Fixed-Price",TM:"Time & Materials",LH:"Labor-Hour",CR:"Cost-Reimbursement",CPFF:`CPFF (${state.cpffForm||"form TBD"})`,HYBRID:"Hybrid"}[state.contractType]; }
+
+function collectDefaults(){
+  const b=state.b, d=[];
+  if(b.coverage==="bh"&&["it","services"].includes(state.domain)) d.push({t:"Coverage: business hours (M–F 8–5)",r:"Default for non-emergency federal services."});
+  if(state.commercial==="unsure") d.push({t:"Commercial-item determination pending",r:"Flagged for CO; proceeding under Part 15 assumptions."});
+  if(b.clin==="unsure") d.push({t:"CLIN structure: by period",r:"Recommended default when preference unspecified."});
+  if(state.contractType==="CPFF"&&state.cpffForm==="term") d.push({t:"CPFF term form (16.306(d)(2))",r:"Default for uncertain-outcome R&D; flag for CO confirmation."});
+  if(state.domain==="services"&&(b.svcSca==="yes"||b.svcSca==="unsure")) d.push({t:"Service Contract Labor Standards apply",r:"DOL wage determination to be incorporated in the solicitation."});
+  if(state.domain==="services"&&b.svcPersonal==="review") d.push({t:"Personal-services determination pending",r:"Confirm no employer-employee relationship; flag for CO."});
+  if(state.domain==="construction") d.push({t:`Magnitude disclosed as ${magnitudeText(b.conMagnitude)}`,r:"Range disclosed in lieu of Government estimate (FAR 36.204)."});
+  if(state.domain==="construction") d.push({t:"Davis-Bacon wage determination to attach",r:"Construction wage rates apply."});
+  if(state.domain==="ae") d.push({t:`A/E design fee ceiling: ${aeFeePct()}% of ECC`,r:`Statutory limit${state.agencyKey==="DOD"?" (DoD 10% tier)":""}; investigative services excluded.`});
+  if(state.domain==="rnd"&&b.rdData==="tbd") d.push({t:"Data rights to be negotiated",r:"Identify rights in technical data/software before award."});
+  if(!b.aql&&["it","services"].includes(state.domain)) d.push({t:"AQLs to be finalized",r:"No AQL entered; placeholder inserted for CO/program office."});
+  d.push({t:`Standard work year: 1,880 productive hours`,r:"Used in derivation basis; not stated in the document body."});
+  return d;
+}
+
+/* ============================ DOCUMENT ASSEMBLY ============================ */
+function cref(key){ return `<span class="cref">${esc(citeText(key))}</span>`; }
+function ph(t){ return `<span class="ph">[${esc(t)}]</span>`; }
+
+function magnitudeText(c){ return {r1:"less than $25,000",r2:"between $25,000 and $100,000",r3:"between $100,000 and $250,000",r4:"between $250,000 and $500,000",r5:"between $500,000 and $1,000,000",r6:"between $1,000,000 and $5,000,000",r7:"between $5,000,000 and $10,000,000",r8:"more than $10,000,000"}[c]||ph("select range"); }
+const AE_PHASE_NAMES={schematic:"Schematic Design",dd:"Design Development",cd:"Construction Documents",bidding:"Bidding / Procurement Support",ca:"Construction Administration"};
+
+function domainSection3(S,isPWS,b){
+  if(state.domain==="construction"){
+    S("Scope of Work",`
+      <p>The contractor shall furnish all labor, materials, equipment, and supervision to ${({new:"construct",reno:"renovate/alter",repair:"repair"}[b.conType]||"perform")} the work described in the drawings and specifications, in accordance with the contract documents and applicable codes (${cref("con_part")}).</p>
+      <p><b>Delivery method:</b> ${{dbb:"Design-Bid-Build (Government-furnished design).",db:"Design-Build (contractor design and construction).",twophase:"Two-phase Design-Build selection."}[b.conDelivery]||ph("method")} ${b.conSite?`<b>Site/phasing:</b> ${esc(b.conSite)}.`:""}</p>
+      <p>Work shall conform to the drawings and specifications identified in ${ph("Attachment — Drawings & Specs")}. ${b.conSustain==="leed"?"Sustainability/LEED requirements apply per the specifications.":""}</p>`);
+    return;
+  }
+  if(state.domain==="ae"){
+    const phases=(b.aePhases||[]);
+    S("Scope of Services — Architect-Engineer",`
+      <p>The contractor shall provide architect-engineer design services (${cref("con_part")}), selected on the basis of qualifications (${cref("brooks")}). Disciplines: ${esc(b.aeDisciplines)||ph("list disciplines")}.</p>
+      ${phases.map((p,i)=>`<h3 class="sub">3.${i+1} ${esc(AE_PHASE_NAMES[p]||p)}</h3><p>The contractor shall produce and deliver the ${esc((AE_PHASE_NAMES[p]||p).toLowerCase())} submittal, including ${ph("required drawings, calculations, and specifications for this phase")}.</p>`).join("")||`<p>${ph("select design phases in Block 2")}</p>`}`);
+    return;
+  }
+  if(state.domain==="rnd"){
+    S("Research Objectives and Tasks",`
+      <p>This is a ${{basic:"basic research",applied:"applied research",development:"development"}[b.rdType]||"research"} effort (${cref("rnd_part")}). Work is described in terms of the research objective; technical results are not guaranteed. The Government does not prescribe staffing or level of detail beyond the stated objective.</p>
+      <h3 class="sub">3.1 Research Objective</h3><p>${esc(b.rdObjective)||ph("state the research objective / problem")}</p>
+      <h3 class="sub">3.2 Approach</h3><p>The contractor shall ${b.rdEffort==="loe"?"apply the agreed level of effort toward the objective over the period of performance":"pursue the objective toward the defined end item/prototype"}. ${ph("tasks / research thrusts")}</p>`);
+    return;
+  }
+  // IT & Services (and default) — PWS/SOW generic, with a services flavor note
+  const svcNote = state.domain==="services" ? ` Service functions: ${esc(b.svcFunctions)||ph("list functions")}.` : "";
+  if(isPWS){
+    S("Requirements — Performance Objectives",`
+      <p>Performance is described in terms of required outcomes and measurable standards (${cref("results")}). The contractor shall achieve the objectives below; the Government does not prescribe staffing, level of effort, or the number of personnel (${cref("pba")}).${svcNote}</p>
+      <h3 class="sub">3.1 ${ph("Objective title")}</h3>
+      <p><b>Required outcome:</b> ${ph("what the contractor shall achieve")}<br>
+      <b>Performance standard:</b> ${esc(b.aql)||ph("measurable threshold")}<br>
+      <b>Acceptable Quality Level:</b> ${esc(b.aql)||ph("AQL")}<br>
+      <b>Method of assessment:</b> ${ph("inspection / demonstration / analysis / test")}</p>`);
+  } else {
+    S("Requirements — Task Areas",`
+      <p>The contractor shall perform the tasks below (${cref("results")}). Task descriptions state required results; they do not prescribe the number of personnel or hours.${svcNote}</p>
+      <h3 class="sub">3.1 ${ph("Task area title")}</h3>
+      <p><b>Task description:</b> The contractor shall ${ph("verb + deliverable")}.<br>
+      <b>Deliverables:</b> ${ph("mapped to Section 4")}<br>
+      <b>Government-furnished resources:</b> ${ph("as listed in Section 8")}</p>`);
+  }
+}
+
+function domainExtraSections(S,b){
+  if(state.domain==="services" && b.svcSca==="yes"){
+    S("Service Contract Labor Standards",`<p>This requirement is subject to the Service Contract Labor Standards (${cref("sca")}). The applicable Department of Labor wage determination is incorporated into the solicitation; the contractor shall pay service employees no less than the wages and fringe benefits in the wage determination. ${ph("WD number")}</p>`);
+  }
+  if(state.domain==="construction"){
+    S("Magnitude of Construction",`<p>The magnitude of this construction project is ${magnitudeText(b.conMagnitude)} (${cref("magnitude")}). This range is disclosed in lieu of the Government estimate.</p>`);
+    S("Construction Wage Rate Requirements",`<p>Construction wage rates apply (${cref("davis")}). The applicable Department of Labor wage determination is incorporated into the solicitation; the contractor shall pay laborers and mechanics no less than the prevailing wages stated therein. ${ph("WD number")}</p>`);
+    if(b.conBond==="miller"){
+      S("Bonding",`<p>Performance and payment bonds are required (${cref("miller")}). The contractor shall furnish bonds in the penal amounts stated in ${ph("the solicitation")} prior to commencing work.</p>`);
+    }
+  }
+  if(state.domain==="ae"){
+    S("Basis of Fee",`<p>The fee for producing and delivering designs, plans, drawings, and specifications shall not exceed <b>${aeFeePct()}%</b> of the estimated construction cost of ${b.aeConstCost?money(parseMoney(b.aeConstCost)):ph("ECC")} — a ceiling of ${b.aeConstCost?money(parseMoney(b.aeConstCost)*aeFeePct()/100):ph("cap")} (${cref("aefee")}).${b.aeInvestigative==="yes"?" Investigative and feasibility services are excluded from this limitation.":""}</p>`);
+    S("Procurement Method",`<p>Selection is qualifications-based under the Brooks Act (${cref("brooks")}); price is not an initial evaluation factor. Firms submit the SF-330; the Government negotiates a fair and reasonable price with the most highly qualified firm.</p>`);
+  }
+  if(state.domain==="rnd"){
+    S("Rights in Technical Data and Computer Software",`<p>${{govt:"The Government shall receive unlimited/government-purpose rights in technical data and computer software developed under this effort.",limited:"The contractor asserts limited/restricted rights in identified contractor-funded items; all other data is delivered with government-purpose rights.",tbd:"Data rights are to be negotiated and identified in the contract."}[b.rdData]||ph("data-rights posture")} (${cref("datarights")}).</p>`);
+    S("Technical Reporting",`<p>The contractor shall submit ${b.reporting||ph("periodic")} technical progress reports and a final technical report documenting methodology, results, and recommendations. ${b.rdProto==="proto"?"Prototype/hardware deliverables shall be accompanied by as-built data and test results.":""}</p>`);
+  }
+}
+function domainRefs(){
+  const keys={services:(state.b.svcSca==="yes"?["svc_part","sca"]:["svc_part"]),construction:["con_part","davis","miller","magnitude"],ae:["con_part","brooks","aefee"],rnd:["rnd_part","datarights"]}[state.domain]||[];
+  return keys.map(k=>({id:citeText(k).split(" / ")[0],title:CITES[k].note}));
+}
+
+function buildDocSections(){
+  const b=state.b, isPWS=state.docType==="PWS";
+  const secs=[]; let n=0;
+  const S=(title,html)=>{ n++; secs.push({num:n,title,html}); };
+
+  S("Introduction",`
+    <h3 class="sub">1.1 Purpose</h3><p>This ${state.docType} sets forth the ${isPWS?"performance objectives and standards":"tasks and requirements"} for ${esc(state.title)||ph("requirement title")}.${state.contractType==="CPFF"?` This is a Cost-Plus-Fixed-Fee, <b>${state.cpffForm||ph("completion/term")} form</b> effort (${cref("cpff")}).`:""}</p>
+    <h3 class="sub">1.2 Background</h3><p>${esc(state.background)||ph("agency background and mission context")}</p>
+    <h3 class="sub">1.3 Scope Summary</h3><p>${scopeSummary()}</p>
+    <h3 class="sub">1.4 Applicable Documents and Standards</h3>${applicableDocs()}`);
+
+  S("Definitions and Acronyms",`<p>${ph("define program-specific terms")}. See Appendix D for the acronym list.</p>`);
+
+  domainSection3(S,isPWS,b);
+
+  S("Deliverables",`<table class="d"><thead><tr><th>ID</th><th>Title</th><th>Format</th><th>Frequency</th><th>Acceptance criteria</th></tr></thead>
+    <tbody>
+      <tr><td>D-01</td><td>Monthly Status Report</td><td>PDF</td><td>Monthly</td><td>Complete, on time, ${state.docType==="PWS"?"meets content standard":"per task"}</td></tr>
+      ${(b.transition==="in"||b.transition==="both"||b.basescope==="rampup")?`<tr><td>D-02</td><td>Transition-In Plan</td><td>Document</td><td>Once, ${ph("NLT day 10")}</td><td>Approved by COR</td></tr>`:""}
+      ${(b.transition==="out"||b.transition==="both")?`<tr><td>D-03</td><td>Transition-Out Plan</td><td>Document</td><td>Once, ${ph("NLT 90 days before end")}</td><td>Approved by COR</td></tr>`:""}
+      <tr><td>D-04</td><td>System Documentation</td><td>Document</td><td>${ph("milestone")}</td><td>${ph("criteria")}</td></tr>
+    </tbody></table>`);
+
+  domainExtraSections(S,b);
+
+  if(state.contractType==="TM"||state.contractType==="LH"){
+    S("Labor Category Ceiling Hours",`
+      <p>Per ${cref("ceiling")}, the following labor categories and ceiling hours are provided for offerors to propose rates against. This is a pricing risk-sharing mechanism, <b>not</b> an FTE estimate or staffing prescription — no SOC codes, FTE counts, or derivation basis appear here.</p>
+      <table class="d"><thead><tr><th>Labor category</th><th>Base</th>${optionYearHeaders()}<th>Total ceiling</th></tr></thead>
+      <tbody>${ceilingRows()}</tbody></table>`);
+  }
+
+  S("Period of Performance",`<p>${b.pop==="base_oy"?`A base year and ${esc(b.oy)} option year(s), exercisable at the Government's discretion.`:"A single base period."} ${ph("insert dates")}</p>`);
+  S("Place of Performance",`<p>${{single:"A single Government or contractor site.",multi:`${esc(b.sites)||ph("N")} sites.`,remote:"Primarily virtual/remote performance.",hybrid:"Hybrid on-site and remote."}[b.geo]||ph("place")} ${ph("addresses")}</p>`);
+  S("Government-Furnished Property / Information",`<p>${ph("list GFP/GFE/GFI, or state None")}.</p>`);
+  S("Security Requirements",securitySection());
+
+  S("Key Personnel",`
+    <p>The following roles are designated key personnel with minimum qualifications; the Government does not quantify the workforce here (${cref("results")}). Substitution of any key personnel requires prior written approval of the Contracting Officer (${cref("keypers")} — <b>not</b> FAR 52.237-2).</p>
+    <ul class="dl">${state.keyPersonnel.split(/[,;\n]/).map(r=>r.trim()).filter(Boolean).map(r=>`<li><b>${esc(r)}</b> — ${ph("minimum qualifications")}</li>`).join("")}</ul>`);
+
+  S("Reporting and Oversight",`<p>Reporting cadence: <b>${b.reporting||ph("cadence")}</b>. Meetings: kickoff, ${b.reporting==="weekly"?"weekly status, ":""}monthly program review${ph(", quarterly executive review")}. ${ph("points of contact")}</p>`);
+
+  S(isPWS?"Quality Assurance Surveillance Plan (Summary)":"Inspection and Acceptance",`
+    <p>${isPWS?`Performance is assessed against the standards below (${cref("qa")}).`:`Inspection and acceptance are conducted per ${cref("inspect")}.`} A full QASP with surveillance schedules may be issued separately.</p>
+    <table class="d"><thead><tr><th>Metric</th><th>Standard</th><th>AQL</th><th>Method</th><th>Frequency</th><th>Payment consequence</th></tr></thead>
+    <tbody>
+      <tr><td>${ph("metric")}</td><td>${esc(b.aql)||ph("standard")}</td><td>${ph("AQL")}</td><td>${ph("method")}</td><td>${b.reporting||ph("freq")}</td><td>Below threshold: ${ph("% deduction on affected invoice")}</td></tr>
+    </tbody></table>
+    <p style="font-size:11.5px;color:#8a5a12;background:#fdf6e6;border:1px solid #f0dcb4;border-radius:6px;padding:8px 10px;margin-top:8px">Payment-consequence column carries administrative/payment outcomes only. CPARS ratings are a separate post-performance evaluation (FAR 42.15) and are deliberately excluded.</p>`);
+
+  if(b.transition&&b.transition!=="none"){
+    S("Transition",`
+      ${(b.transition==="in"||b.transition==="both")?`<h3 class="sub">13.1 Transition-In</h3><p>Knowledge transfer, incumbent cooperation, parallel operations. ${ph("duration")}</p>`:""}
+      ${(b.transition==="out"||b.transition==="both")?`<h3 class="sub">13.2 Transition-Out</h3><p>Data return, documentation, contractor cooperation. ${ph("timeline")}</p>`:""}`);
+  }
+
+  S("Constraints and Assumptions",`
+    <table class="d"><thead><tr><th>ID</th><th>Assumption / default applied</th><th>Rationale</th><th>CO / PO action</th></tr></thead>
+    <tbody>${collectDefaults().map((d,i)=>`<tr><td>A-${String(i+1).padStart(2,"0")} [DEFAULT]</td><td>${esc(d.t)}</td><td>${esc(d.r)}</td><td>Confirm before release</td></tr>`).join("")}
+    ${state.commercial==="unsure"?`<tr><td>A-${String(collectDefaults().length+1).padStart(2,"0")}</td><td>Commercial-item determination pending</td><td>Not yet determined</td><td>Flag for Contracting Officer</td></tr>`:""}
+    </tbody></table>`);
+
+  return secs;
+}
+
+function scopeSummary(){
+  const b=state.b, p=[];
+  p.push(`a ${dom()?dom().label+" ":""}${state.docType==="PWS"?"performance-based":"task-based"} ${state.commercial==="commercial"?"commercial ":""}effort`);
+  if(state.domain==="construction") p.push(`${{new:"new construction",reno:"renovation",repair:"repair"}[b.conType]||"construction"} of ${magnitudeText(b.conMagnitude)} magnitude`);
+  else if(state.domain==="ae") p.push(`design services with a ${aeFeePct()}% fee ceiling on estimated construction cost`);
+  else if(state.domain==="rnd") p.push(`${{basic:"basic research",applied:"applied research",development:"development"}[b.rdType]||"research"} on a ${b.rdEffort==="loe"?"level-of-effort":"defined-deliverable"} basis`);
+  else {
+    if(b.delivery) p.push({augmentation:"delivered as government staff with contractor augmentation",fully:"delivered as a fully contracted service",hybrid:"delivered under a hybrid model"}[b.delivery]);
+    if(b.coverage) p.push({bh:"during business hours",ext:"under extended hours",247:"on a 24/7/365 basis",surge:"with seasonal surge coverage"}[b.coverage]);
+    if(b.buildbuy) p.push({custom:"involving custom development",cots:"built on COTS/SaaS configuration",hybrid:"combining custom work on a COTS platform"}[b.buildbuy]);
+  }
+  return `This requirement is ${p.filter(Boolean).join(", ")}. ${ph("refine as needed")}`;
+}
+function applicableDocs(){
+  const rows = AUTHORITIES.filter(a=>state.regime==="rfo"||a.regime!=="rfo").map(a=>
+    `<tr><td class="mono" style="white-space:nowrap"><span class="cref">${esc(a.id)}</span></td><td>${esc(a.name)}</td><td class="asof-stamp">as of ${esc(a.asof)}</td></tr>`).join("");
+  const dev = state.regime==="rfo"?`<tr><td class="mono"><span class="cref">${esc(state.devNo||"[agency deviation]")}</span></td><td>${esc(agency().devSeries)} adopting RFO model text in lieu of the codified part${state.devDate?` (eff. ${esc(state.devDate)})`:""}</td><td class="asof-stamp">verify at acquisition.gov/far-overhaul</td></tr>`:"";
+  const dref = domainRefs().map(r=>`<tr><td class="mono"><span class="cref">${esc(r.id)}</span></td><td>${esc(r.title)}</td><td class="asof-stamp">${esc(dom()?dom().label:"")}</td></tr>`).join("");
+  return `<table class="d"><thead><tr><th>Reference</th><th>Title</th><th>Currency</th></tr></thead><tbody>${state.regime==="rfo"?rows+dev:`<tr><td class="mono"><span class="cref">48 CFR (FAR)</span></td><td>Federal Acquisition Regulation, as published</td><td class="asof-stamp">codified</td></tr>`}${dref}</tbody></table>`;
+}
+function securitySection(){
+  return `<p>The contractor shall safeguard information systems and controlled unclassified information per ${cref("safeguard")}${state.regime==="rfo"?" (and, where CUI is in scope, NIST SP 800-171)":""}. Personnel suitability: ${ph("Public Trust tier / clearance level")}.</p>
+  <p>${ph("If classified: a DD Form 254 will be issued at award and incorporated by reference; identify SCG, clearance by position, and incident-reporting timelines")}.</p>`;
+}
+function optionYearHeaders(){ const oy=state.b.pop==="base_oy"?(parseInt(state.b.oy)||0):0; let h=""; for(let i=1;i<=oy;i++)h+=`<th>OY${i}</th>`; return h; }
+function ceilingRows(){
+  const oy=state.b.pop==="base_oy"?(parseInt(state.b.oy)||0):0;
+  const cats=[...new Set(state.staffing.map(r=>r.lcat))].slice(0,6);
+  return cats.map(c=>`<tr><td>${esc(c)}</td><td>${ph("hrs")}</td>${Array(oy).fill(`<td>${ph("hrs")}</td>`).join("")}<td>${ph("total")}</td></tr>`).join("")||`<tr><td>${ph("labor category")}</td><td>${ph("hrs")}</td>${Array(oy).fill(`<td>${ph("hrs")}</td>`).join("")}<td>${ph("total")}</td></tr>`;
+}
+
+function renderDocumentHTML(){
+  const secs=buildDocSections();
+  const toc = secs.length>8?`<div class="toc"><b style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)">Contents</b>${secs.map(s=>`<div>${s.num}. ${esc(s.title)}</div>`).join("")}</div>`:"";
+  return `<h1 class="dt">${state.docType==="PWS"?"PERFORMANCE WORK STATEMENT":"STATEMENT OF WORK"}</h1>
+    <div class="doc-sub">${esc(state.title)||"[Requirement Title]"} · ${esc(state.agencyName)||"[Program Office]"}${state.regime==="rfo"?` · governed by ${esc(state.devNo||"agency RFO class deviation")}`:""}</div>
+    ${toc}
+    ${secs.map(s=>`<h2 class="sec">${s.num}. ${esc(s.title)}</h2>${s.html}`).join("")}
+    <h2 class="sec">Appendices</h2><p style="font-size:12.5px;color:var(--muted)">A: Current Environment · B: Volume Data · C: Interface Specifications · D: Acronym List (include only those applicable).</p>`;
+}
+
+/* ============================ HANDOFFS ============================ */
+function staffingTableText(){
+  const w=Math.max(...state.staffing.map(r=>r.lcat.length),18);
+  let out="=== STAFFING HANDOFF TABLE — FOR IGCE BUILDER ===\nInternal government workpaper. NOT part of the SOW/PWS contract deliverable.\nDo not paste this into the contract file.\n\n";
+  out+="| Labor Category".padEnd(w+3)+"| SOC Code | FTEs | Phase      | Hrs/Yr | Notes\n";
+  state.staffing.forEach(r=>{ out+=`| ${r.lcat.padEnd(w)} | ${r.soc.padEnd(8)} | ${String(r.ftes).padEnd(4)} | ${r.phase.padEnd(10)} | ${r.hrs.padEnd(6)} | ${r.notes}\n`; });
+  return out;
+}
+function clinRows(){
+  const b=state.b, oy=b.pop==="base_oy"?(parseInt(b.oy)||0):0, rows=[];
+  const pref=b.clin==="unsure"?"period":b.clin;
+  if(pref==="period"){
+    rows.push(["0001","Base Year Performance",contractType52(),"Covers Section 3 objectives"]);
+    for(let i=1;i<=oy;i++) rows.push([`${i}001`,`Option Year ${i} Performance`,contractType52(),"Same scope as base"]);
+  } else if(pref==="function"){
+    ["Development","Operations","Maintenance","Training"].forEach((f,i)=>rows.push([`000${i+1}`,`${f}`,contractType52(),`${f} scope`]));
+  } else {
+    rows.push(["0001","Primary Deliverable Set",contractType52(),"Per Section 4 deliverables"]);
+    rows.push(["0002","Secondary Deliverables",contractType52(),"Per Section 4 deliverables"]);
+  }
+  rows.push(["X001","Travel","Cost-reimbursable (NTE)","FAR 31.205-46; no fee"]);
+  rows.push(["X002","ODCs","Cost-reimbursable (NTE)","Receipts required"]);
+  return rows;
+}
+function contractType52(){ return {FFP:"FFP",TM:"T&M",LH:"LH",CR:"Cost-reimbursable",CPFF:"CPFF",HYBRID:"Per CLIN"}[state.contractType]||"FFP"; }
+function clinTableText(){
+  let out="=== CLIN HANDOFF TABLE — FOR SECTION B OF THE SOLICITATION ===\nContract-admin workpaper. NOT part of the SOW/PWS contract deliverable.\nPaste into Section B of the solicitation shell, not the PWS body.\n\n| CLIN | Description                | Pricing Basis            | Period / Scope Notes\n";
+  clinRows().forEach(r=>{ out+=`| ${r[0].padEnd(4)} | ${r[1].padEnd(26)} | ${r[2].padEnd(24)} | ${r[3]}\n`; });
+  return out;
+}
+function justificationText(){
+  const a=agency();
+  return `=== FAR 16.104 — EO 14402 JUSTIFICATION (STUB) ===
+Contract-file workpaper. NOT part of the SOW/PWS requirement body.
+Must be APPROVED PRIOR TO SOLICITATION RELEASE.
+
+Contract type proposed: ${contractLabel()} (covered contract/order)
+Agency: ${a.name}
+Estimated value (incl. options): ${state.estValue||"[enter]"}
+Agency-head approval threshold: ${money(a.threshold)}
+Approval authority: ${needsAgencyHead()?"AGENCY HEAD (delegable only to CAO or non-career SES)":"Contracting Officer justification to agency head; agency-head written approval not triggered by value"}
+
+Required content:
+1. Why fixed-price is not practicable for this requirement.
+2. Nature/uncertainty of the work preventing FFP pricing.
+3. Risk allocation and Government cost controls to be applied.
+4. Market research supporting the pricing approach.
+5. ${state.contractType==="CPFF"?`CPFF form: ${state.cpffForm||"[completion/term]"} (FAR 16.306(d)${state.cpffForm==="completion"?"(1)":state.cpffForm==="term"?"(2)":""}).`:"Contract-type-specific findings."}
+
+Basis: ${citeText("fp_pref")} implementing EO 14402. Verify current deviation text at acquisition.gov/far-overhaul (as of ${ASOF}).`;
+}
+
+/* ============================ PREFLIGHT ============================ */
+function preflight(){
+  const c=[], b=state.b;
+  const push=(status,title,detail)=>c.push({status,title,detail});
+  if(state.regime) push("pass","Regime selected",state.regime==="rfo"?"Citations resolve to RFO model deviation text.":"Citations resolve to codified FAR.");
+  else push("stop","No regime selected","Pick codified FAR or RFO before generating.");
+  if(state.regime==="rfo"){ state.devNo?push("pass","Agency class deviation identified",`Referenced as ${state.devNo}.`):push("warn","Agency deviation number missing","Enter the governing class deviation so the document cites the real instrument."); }
+  if(isCovered()){
+    (state.estValue)?push("pass","Covered contract value entered",needsAgencyHead()?`≥ ${money(agency().threshold)} — agency-head approval flagged.`:`Below ${money(agency().threshold)} tier.`):push("warn","Covered contract, no value","Enter estimated value to test the 16.104 threshold.");
+    push("pass","16.104 justification emitted","Kept as a separate workpaper, not in the document body.");
+  } else if(state.contractType==="FFP"){ push("pass","Fixed-price — no justification","EO 14402 justification not required."); }
+  if(state.contractType==="CPFF") (state.cpffForm)?push("pass","CPFF form committed",`${state.cpffForm} form (16.306(d)${state.cpffForm==="completion"?"(1)":"(2)"}).`):push("stop","CPFF form not committed","Select completion or term form.");
+  push("pass","Staffing kept out of document body",`FTE/SOC data confined to the workpaper per ${citeText("results")}.`);
+  push("pass","CLINs kept out of document body","CLIN structure emitted only to the Section B handoff.");
+  if(state.regime==="rfo") push("pass","DEI (EO 14398) at solicitation layer","Part 22/52 clause changes handled in the solicitation, not the requirement body.");
+  // domain-specific
+  if(state.domain==="services"){
+    push(b.svcSca?"pass":"warn", b.svcSca==="yes"?"SCA wage determination flagged":(b.svcSca?"SCA status set":"SCA status not set"), b.svcSca==="yes"?"DOL wage determination to attach to the solicitation.":"Confirm Service Contract Labor Standards applicability.");
+    if(b.svcPersonal==="review") push("warn","Personal-services risk flagged","Confirm non-personal services before release.");
+  } else if(state.domain==="construction"){
+    push("pass","Magnitude disclosed, not the estimate","FAR 36.204 range shown in lieu of the Government estimate.");
+    push("pass","Construction wage rates noted","Davis-Bacon wage determination to attach.");
+    push(b.conBond?"pass":"warn",b.conBond==="miller"?"Miller Act bonding required":"Bonding basis set","Performance & payment protection addressed.");
+  } else if(state.domain==="ae"){
+    push((b.aeConstCost!=="")?"pass":"warn",(b.aeConstCost!=="")?`A/E fee ceiling computed (${aeFeePct()}%)`:"ECC not entered",(b.aeConstCost!=="")?`Design fee capped at ${money(parseMoney(b.aeConstCost)*aeFeePct()/100)}.`:"Enter estimated construction cost to compute the fee cap.");
+    push("pass","Qualifications-based selection noted","Brooks Act QBS — price is not an initial factor.");
+  } else if(state.domain==="rnd"){
+    push(b.rdObjective?"pass":"warn",b.rdObjective?"Research objective stated":"Objective missing","Described in terms of the objective, not a guaranteed outcome.");
+    push(b.rdData?"pass":"warn",b.rdData?"Data rights posture set":"Data rights not set","Rights in technical data/software addressed.");
+    if(isCovered()) push("pass","R&D fixed-price exception context","EO 14402 recognizes R&D — basis captured in the 16.104 stub.");
+  }
+  if(["it","services"].includes(state.domain)) push(state.b.aql?"pass":"warn",state.b.aql?"AQLs present":"AQLs are placeholders",state.b.aql?"Performance standards populated.":"Add measurable AQLs before release.");
+  return c;
+}
+
+/* ============================ STEP: WORKSPACE ============================ */
+function renderWorkspace(){
+  const tabs=[
+    {k:"doc",label:state.docType||"Document",tag:"doc",tagtext:"contract file"},
+    {k:"staffing",label:"Staffing handoff",tag:"wp",tagtext:"workpaper"},
+    {k:"clin",label:"CLIN handoff",tag:"wp",tagtext:"workpaper"},
+    ...(isCovered()?[{k:"just",label:"16.104 justification",tag:"wp",tagtext:"workpaper"}]:[]),
+    {k:"auth",label:"Authorities",tag:null},
+    {k:"pre",label:"Preflight",tag:null}
+  ];
+  const tabbar=`<div class="tabs">${tabs.map(t=>`<button class="tab ${state.wsTab===t.k?'active':''}" onclick="state.wsTab='${t.k}';render()">${esc(t.label)}${t.tag?`<span class="tag ${t.tag==='doc'?'doc':''}">${t.tagtext}</span>`:""}</button>`).join("")}</div>`;
+
+  let body="";
+  if(state.wsTab==="doc"){
+    body=`<div class="doc-shell">
+      <div class="doc-toolbar no-print">
+        <button class="btn primary" onclick="exportWord()">Export Word (.doc)</button>
+        <button class="btn" onclick="printDoc()">Print / Save PDF</button>
+        <span class="sp">Exports contain the requirement body only — no staffing, CLINs, or justification.</span>
+      </div>
+      <div class="doc-body" id="docBody">${renderDocumentHTML()}</div>
+    </div>`;
+  } else if(state.wsTab==="staffing"){
+    body=`<div class="workpaper-banner">⚑ <div><b>Internal government workpaper.</b> Data handoff to the IGCE Builder. Not a section of the SOW/PWS; never saved into the contract file.</div></div>
+      <div class="card" style="padding:0"><pre style="margin:0;padding:18px;font-family:var(--mono);font-size:12px;overflow-x:auto;white-space:pre">${esc(staffingTableText())}</pre></div>
+      <button class="btn" style="margin-top:12px" onclick="copyText(staffingTableText())">Copy table</button>
+      <p class="hint">Ready for handoff to the IGCE Builder (FFP, LH/T&M, or CR skill per the contract type selected). The IGCE Builder produces the formal Independent Government Cost Estimate as a separate document — that's where rates, wraps, and costs are documented.</p>`;
+  } else if(state.wsTab==="clin"){
+    body=`<div class="workpaper-banner">⚑ <div><b>Contract-admin workpaper.</b> Suggested starting point for Section B of the solicitation. The CO owns the final CLIN structure. Not part of the SOW/PWS.</div></div>
+      <div class="card" style="padding:0"><pre style="margin:0;padding:18px;font-family:var(--mono);font-size:12px;overflow-x:auto;white-space:pre">${esc(clinTableText())}</pre></div>
+      <button class="btn" style="margin-top:12px" onclick="copyText(clinTableText())">Copy table</button>`;
+  } else if(state.wsTab==="just"){
+    body=`<div class="workpaper-banner">⚑ <div><b>Contract-file workpaper.</b> ${needsAgencyHead()?"Agency-head approval required — ":""}must be approved <b>before solicitation release</b>. Never enters the requirement body.</div></div>
+      <div class="card" style="padding:0"><pre style="margin:0;padding:18px;font-family:var(--mono);font-size:12px;overflow-x:auto;white-space:pre">${esc(justificationText())}</pre></div>
+      <button class="btn" style="margin-top:12px" onclick="copyText(justificationText())">Copy stub</button>`;
+  } else if(state.wsTab==="auth"){
+    body=`<p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Every RFO citation carries an "as of" date and a source link. Confirm against the source before release — the model text has moved repeatedly this year.</p>
+      <div class="authreg">${AUTHORITIES.filter(a=>state.regime==="rfo"||a.regime!=="rfo").map(a=>`
+        <div class="auth-item"><div class="lbl"><span class="cite ${a.regime==='rfo'?'rfo':'legacy'}">${esc(a.id)}<span class="asof">${esc(a.asof)}</span></span></div>
+        <div class="meta"><div class="nm">${esc(a.name)}</div><div class="ds">${esc(a.ds)}</div><a href="${a.url}" target="_blank" rel="noopener">${a.url.replace('https://','')}</a></div></div>`).join("")}
+        ${state.regime==="rfo"?`<div class="auth-item"><div class="lbl"><span class="cite rfo">${esc(state.devNo||"[deviation]")}<span class="asof">${esc(state.devDate||"date?")}</span></span></div><div class="meta"><div class="nm">${esc(agency().name)} class deviation</div><div class="ds">${esc(agency().devSeries)}, adopting RFO model text in lieu of the codified part.</div><a href="${DEV_GUIDE}" target="_blank" rel="noopener">${DEV_GUIDE.replace('https://','')}</a></div></div>`:""}
+      </div>`;
+  } else if(state.wsTab==="pre"){
+    const pf=preflight();
+    body=pf.map(x=>`<div class="check ${x.status}"><div class="ic">${x.status==="pass"?"✓":x.status==="warn"?"!":"×"}</div><div class="body"><b>${esc(x.title)}</b><p>${esc(x.detail)}</p></div></div>`).join("");
+  }
+
+  return `<div class="phase-head"><div class="eyebrow">Step 9 · Outputs</div><h2>Document & handoffs</h2>
+    <p>One requirement document for the contract file, and separate workpapers for staffing, CLINs${isCovered()?", and the 16.104 justification":""} — kept apart by design.</p></div>
+    ${tabbar}${body}
+    <div class="navbar"><button class="btn ghost" onclick="prev()">← Back to summary</button><div></div></div>`;
+}
+
+/* ============================ EXPORT ============================ */
+function copyText(t){ navigator.clipboard?.writeText(t).then(()=>toast("Copied")); }
+function toast(msg){ const d=document.createElement("div"); d.textContent=msg; d.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:99;box-shadow:var(--shadow)"; document.body.appendChild(d); setTimeout(()=>d.remove(),1400); }
+
+function exportWord(){
+  const inner = renderDocumentHTML();
+  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+  <head><meta charset='utf-8'><style>
+    body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1b1b1b}
+    h1{font-size:16pt;text-align:center} h2{font-size:13pt;border-bottom:1px solid #333;padding-bottom:2pt;margin-top:16pt}
+    h3{font-size:11.5pt;margin-top:10pt} table{border-collapse:collapse;width:100%;font-size:9.5pt}
+    th{background:#eef2f8;border:1px solid #99a;padding:4pt;text-align:left} td{border:1px solid #bcc;padding:4pt}
+    .ph{color:#8a6d1a;font-style:italic} .cref{font-family:Consolas,monospace;font-size:9.5pt} .toc{border:1px solid #ccc;padding:8pt}
+    .doc-sub{text-align:center;color:#555;font-size:10pt}
+  </style></head><body>${inner.replace(/class="dt"/g,'').replace(/class="sec"/g,'').replace(/class="sub"/g,'')}</body></html>`;
+  const blob=new Blob(['\ufeff',html],{type:"application/msword"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`${(state.title||state.docType||"requirement").replace(/[^a-z0-9]+/gi,"_")}_${state.docType}.doc`;
+  a.click(); toast("Word document downloaded");
+}
+function printDoc(){ window.print(); }
+
+/* ============================ BIND ============================ */
+function bind(){
+  document.querySelectorAll("[data-go]").forEach(el=>{
+    el.onclick=()=>go(+el.dataset.go);
+    el.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();go(+el.dataset.go);} };
+  });
+  document.querySelectorAll(".opt").forEach(el=>{
+    el.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();el.click();} });
+  });
+  const as=$("#agencySel"); if(as) as.value=state.agencyKey||"";
+}
+
+/* ============================ SESSION ============================ */
+function startApp(){ document.getElementById("gate").classList.add("hidden"); }
+function saveDraft(){
+  const data=JSON.stringify(state,null,2);
+  const blob=new Blob([data],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`${(state.title||"sow-pws-draft").replace(/[^a-z0-9]+/gi,"_")}.json`;
+  a.click(); toast("Draft saved");
+}
+function loadDraft(file,fromGate){
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const loaded=JSON.parse(e.target.result);
+      if(typeof loaded!=="object"||!("b" in loaded)) throw new Error("Not a builder draft");
+      Object.keys(state).forEach(k=>{ if(k in loaded) state[k]=loaded[k]; });
+      if(!stepUnlocked(state.step)) state.step=0;
+      if(fromGate) startApp();
+      render(); toast("Draft loaded");
+    }catch(err){ alert("That file isn't a valid SOW/PWS Builder draft."); }
+  };
+  r.readAsText(file);
+}
+
+/* boot */
+const lrEl = document.getElementById("lastReviewed"); if(lrEl) lrEl.textContent = REVIEWED;
+render();
+</script>
+</body>
+</html>
