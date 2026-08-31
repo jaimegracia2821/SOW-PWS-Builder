@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -390,7 +389,7 @@ const state = {
       // services
       svcFunctions:"", svcSca:null, svcWorkload:"", svcSurge:null, svcPersonal:null,
       // construction
-      conType:null, conDelivery:null, conMagnitude:null, conBond:null, conSite:"", conSustain:null,
+      conType:null, conDelivery:null, conMagnitude:null, conBond:null, conSite:"", conSustain:null, conEM385:null,
       // A/E
       aePhases:[], aeDisciplines:"", aeConstCost:"", aeInvestigative:null,
       // R&D
@@ -851,6 +850,12 @@ function b2_con(){
       ${opt("leed",b.conSustain,"Sustainability / LEED required","",'onclick="setB(\'conSustain\',\'leed\')"')}
       ${opt("none",b.conSustain,"No specific rating","",'onclick="setB(\'conSustain\',\'none\')"')}
     </div>
+    <div class="q-label" style="margin-top:16px">Safety standard — EM 385-1-1</div>
+    <div class="q-help">EM 385-1-1 applies only when the requiring activity is USACE or the contract expressly incorporates it; otherwise the baseline is OSHA 29 CFR 1926. (USACE named as the requiring activity is detected automatically.)</div>
+    <div class="opts" style="margin-top:8px">
+      ${opt("yes",b.conEM385,"Contract expressly incorporates EM 385-1-1","USACE Safety & Health Requirements Manual",'onclick="setB(\'conEM385\',\'yes\')"')}
+      ${opt("no",b.conEM385,"OSHA 29 CFR 1926 baseline only","",'onclick="setB(\'conEM385\',\'no\')"')}
+    </div>
   </div>
 
   ${navbar(!!(b.conType&&b.conDelivery&&b.conMagnitude))}`;
@@ -1126,7 +1131,8 @@ function derive_con(){
   add("Project Manager","11-9021",1,"Base","Key personnel");
   add("Site Superintendent","11-9021",1,"Base","On-site supervision; key personnel");
   add("Quality Control Manager","11-9021",1,"Base","CQC per contract; key personnel");
-  add("Site Safety & Health Officer","19-5011",1,"Base",(/usace|corps of engineers|army corps/i.test(state.agencyName||"")?"OSHA 29 CFR 1926; EM 385-1-1 (USACE requiring activity)":"OSHA 29 CFR 1926 (construction safety)"));
+  const em385=(/usace|corps of engineers|army corps/i.test(state.agencyName||""))||b.conEM385==="yes";
+  add("Site Safety & Health Officer","19-5011",1,"Base",em385?"OSHA 29 CFR 1926; EM 385-1-1 (expressly incorporated or USACE requiring activity)":"OSHA 29 CFR 1926 (construction safety)");
   if(b.conDelivery==="db"||b.conDelivery==="twophase") add("Design Manager (DB)","17-1011","0.5","Base","Design-build coordination");
   add("Craft / Trade Labor","47-0000","—","Base","Priced in subcontracts per Davis-Bacon wage determination — not an FTE count");
   return rows;
