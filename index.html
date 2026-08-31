@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -251,6 +252,7 @@
     <h2>SOW / PWS Builder</h2>
     <p class="lede">Make the scope decisions; the tool assembles a structured draft Statement of Work or Performance Work Statement — with citations that resolve to either the codified FAR or the Revolutionary FAR Overhaul, an EO 14402 fixed-price gate, and staffing and CLIN data kept out of the requirement body by design.</p>
     <div class="discl">
+      <p style="margin:0 0 10px;color:#cdd8e2">This tool produces a structured first draft to accelerate your requirement. It is a drafting aid, not a finished document or legal advice. A contracting officer must review, complete, and validate every section before use.</p>
       <b>Before you start — read this:</b>
       <ul>
         <li>This is an <b>independent drafting aid</b>, not an official Government system and not legal or contracting advice.</li>
@@ -264,7 +266,7 @@
       <button class="load" onclick="document.getElementById('loadFileGate').click()">Load saved draft</button>
       <input type="file" id="loadFileGate" accept="application/json" style="display:none" onchange="loadDraft(this.files[0],true)">
     </div>
-    <div class="foot">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener" style="color:#9fb0bf">James Jenrette · 1102tools.com</a> (MIT).<br>Runs offline · single file · v1.0 · © The Wolverine Group, Inc.</div>
+    <div class="foot">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener" style="color:#9fb0bf">James Jenrette · 1102tools.com</a> (MIT).<br>Runs offline · single file · v2.0 · © The Wolverine Group, Inc.</div>
   </div>
 </div>
 
@@ -274,7 +276,7 @@
       <div class="brand-mark">§</div>
       <div>
         <h1>SOW / PWS Builder</h1>
-        <div class="sub">RFO-aware · v1</div>
+        <div class="sub">RFO-aware · v2</div>
       </div>
     </div>
     <div class="rail-note">Scope decisions in, a structured draft requirement out. Staffing, CLINs, and the 16.104 justification stay out of the document body by design.</div>
@@ -296,12 +298,8 @@
     </div>
     <div class="content" id="content"></div>
     <footer class="sitefoot">
-      <span class="v">SOW / PWS Builder v1.0 · regulatory content last reviewed <span id="lastReviewed"></span></span>
-      <span class="disc">Independent drafting aid — not an official Government system, and not legal or contracting advice. Citations current as of the review date above; the RFO model text changes often — verify against the source before release at <a href="https://www.acquisition.gov/far-overhaul" target="_blank" rel="noopener">acquisition.gov/far-overhaul ↗</a>
-This tool produces a structured first draft to accelerate your
-requirement. It is a drafting aid, not a finished document or legal
-advice. A contracting officer must review, complete, and validate
-every section before use. </span>
+      <span class="v">SOW / PWS Builder v2.0 · regulatory content last reviewed <span id="lastReviewed"></span></span>
+      <span class="disc">Independent drafting aid — not an official Government system, and not legal or contracting advice. Citations current as of the review date above; the RFO model text changes often — verify against the source before release at <a href="https://www.acquisition.gov/far-overhaul" target="_blank" rel="noopener">acquisition.gov/far-overhaul ↗</a></span>
       <span class="disc">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener">James Jenrette · 1102tools.com</a> (MIT). Maintained independently by The Wolverine Group, Inc.</span>
     </footer>
   </div>
@@ -1128,7 +1126,7 @@ function derive_con(){
   add("Project Manager","11-9021",1,"Base","Key personnel");
   add("Site Superintendent","11-9021",1,"Base","On-site supervision; key personnel");
   add("Quality Control Manager","11-9021",1,"Base","CQC per contract; key personnel");
-  add("Site Safety & Health Officer","13-1151",1,"Base","EM 385-1-1 / OSHA compliance");
+  add("Site Safety & Health Officer","19-5011",1,"Base",(/usace|corps of engineers|army corps/i.test(state.agencyName||"")?"OSHA 29 CFR 1926; EM 385-1-1 (USACE requiring activity)":"OSHA 29 CFR 1926 (construction safety)"));
   if(b.conDelivery==="db"||b.conDelivery==="twophase") add("Design Manager (DB)","17-1011","0.5","Base","Design-build coordination");
   add("Craft / Trade Labor","47-0000","—","Base","Priced in subcontracts per Davis-Bacon wage determination — not an FTE count");
   return rows;
