@@ -311,6 +311,8 @@
 /* ============================ DATA ============================ */
 /* ---- MAINTENANCE: update these two lines when you review regulatory content ---- */
 const ASOF = "Jul 2026";              // stamp shown on every citation token
+const PROD_HRS = 1880;                // standard productive hours per person-year
+const COVERAGE_247 = 8760 / PROD_HRS; // ≈ 4.66 people to staff one seat continuously (8,760 annual hours ÷ productive hours)
 const REVIEWED = "18 July 2026";      // stamp shown in the footer
 const FAC = "FAC 2026-01, effective 13 March 2026"; // codified FAR revision stamp
 const FAR_INDEX = "https://www.acquisition.gov/browse/index/far";
@@ -699,7 +701,7 @@ function renderBlock1(){
     </div></div>
 
   <div class="card"><div class="q-label">Coverage model</div>
-    <div class="q-help">24/7 coverage triples single-shift headcount for covered roles.</div>
+    <div class="q-help">24/7 coverage needs ~4.66 people per continuously staffed seat (8,760 annual coverage hours ÷ 1,880 productive hours).</div>
     <div class="opts">
       ${opt("bh",b.coverage,"Business hours (M–F 8–5)","",'onclick="setB(\'coverage\',\'bh\')"')}
       ${opt("ext",b.coverage,"Extended hours","",'onclick="setB(\'coverage\',\'ext\')"')}
@@ -1136,7 +1138,7 @@ function derive_it(){
   if(b.integration==="many"||b.integration==="enterprise") add("Integration Engineer","15-1299",2,lp,"4+ system integrations");
   if(b.migration==="large"||b.migration==="complex"){ add("Data Engineer","15-2051",1,"Base","3+ source migration (time-limited)"); add("Database Administrator","15-1242",1,"Base","Migration support"); }
   const num=parseInt((b.volume||"").replace(/[^0-9]/g,""));
-  if(num&&num>1000){ let agents=Math.max(1,Math.round(num/250/40)); if(b.coverage==="247")agents*=3; else if(b.coverage==="ext")agents=Math.round(agents*1.5); add("Tier 1 Agent","43-4051",agents,lp,`${b.volume} ÷ 250 days ÷ 40/day${b.coverage==="247"?" × 3 (24/7)":""}`); }
+  if(num&&num>1000){ let agents=Math.max(1,Math.round(num/250/40)); if(b.coverage==="247")agents=Math.round(agents*COVERAGE_247); else if(b.coverage==="ext")agents=Math.round(agents*1.5); add("Tier 1 Agent","43-4051",agents,lp,`${b.volume} ÷ 250 days ÷ 40/day${b.coverage==="247"?` × ${COVERAGE_247.toFixed(2)} (24/7 coverage: 8,760 hrs ÷ ${PROD_HRS} productive hrs)`:""}`); }
   const units=parseInt(b.orgunits);
   if(b.geo==="multi"||(units&&units>=3)) add("Change Mgmt / Training Specialist","13-1151",1,lp,"Multi-site or 3+ org units");
   add("Information Security Analyst","15-1212",1,lp,"FISMA / safeguarding support");
@@ -1151,7 +1153,7 @@ function derive_svc(){
   const num=parseInt((b.svcWorkload||"").replace(/[^0-9]/g,""));
   let line=2;
   if(num){ if(num>=100000)line=8; else if(num>=25000)line=5; else if(num>=5000)line=3; }
-  if(b.coverage==="247") line*=3; else if(b.coverage==="ext") line=Math.round(line*1.5);
+  if(b.coverage==="247") line=Math.round(line*COVERAGE_247); else if(b.coverage==="ext") line=Math.round(line*1.5);
   add("Functional Supervisor","43-1011",Math.max(1,Math.round(line/8)),lp,"~1 per 8 line staff");
   add(b.svcSca==="yes"?"Service Specialist (SCA-covered)":"Service Specialist","43-9061",line,lp,`Derived from workload${b.svcSca==="yes"?"; SCA wage determination applies":""}`);
   if(b.svcSurge==="surge") add("Surge / Flex Staff","43-9061","2",lp,"Periodic surge (variable)");
