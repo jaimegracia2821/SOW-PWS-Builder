@@ -5,7 +5,7 @@ decisions and assembles a contract-file-ready **Statement of Work** or
 **Performance Work Statement** — aware of the Revolutionary FAR Overhaul (RFO)
 and Executive Order 14402.
 
-**▶ Live tool:** tools.wolverine-group.com
+**▶ Live tool:** [tools.wolverine-group.com ](https://tools.wolverine-group.com/)
 
 No install, no account, no backend. Everything runs in the browser; nothing you
 type is uploaded or stored anywhere.
