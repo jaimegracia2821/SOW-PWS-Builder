@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1658,7 +1659,7 @@ function renderWorkspace(){
   if(state.wsTab==="doc"){
     body=`<div class="doc-shell">
       <div class="doc-toolbar no-print">
-        <button class="btn primary" onclick="exportWord()">Export Word (.doc)</button>
+        <button class="btn primary" onclick="exportWord()">Export Word (.docx)</button>
         <button class="btn" onclick="printDoc()">Print / Save PDF</button>
         <span class="sp">${(()=>{const pc=placeholderCount();return pc>0?`Draft — ${pc} bracketed item${pc===1?"":"s"} to complete · `:"";})()}Exports contain the requirement body only — no staffing, CLINs, or justification.</span>
       </div>
@@ -1707,21 +1708,82 @@ function renderWorkspace(){
 function copyText(t){ navigator.clipboard?.writeText(t).then(()=>toast("Copied")); }
 function toast(msg){ const d=document.createElement("div"); d.textContent=msg; d.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:99;box-shadow:var(--shadow)"; document.body.appendChild(d); setTimeout(()=>d.remove(),1400); }
 
-function exportWord(){
-  const inner = renderDocumentHTML();
-  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-  <head><meta charset='utf-8'><style>
-    body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1b1b1b}
-    h1{font-size:16pt;text-align:center} h2{font-size:13pt;border-bottom:1px solid #333;padding-bottom:2pt;margin-top:16pt}
-    h3{font-size:11.5pt;margin-top:10pt} table{border-collapse:collapse;width:100%;font-size:9.5pt}
-    th{background:#eef2f8;border:1px solid #99a;padding:4pt;text-align:left} td{border:1px solid #bcc;padding:4pt}
-    .ph{color:#8a6d1a;font-style:italic} .cref{font-family:Consolas,monospace;font-size:9.5pt} .toc{border:1px solid #ccc;padding:8pt}
-    .doc-sub{text-align:center;color:#555;font-size:10pt}
-  </style></head><body>${inner.replace(/class="dt"/g,'').replace(/class="sec"/g,'').replace(/class="sub"/g,'')}</body></html>`;
-  const blob=new Blob(['\ufeff',html],{type:"application/msword"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-  a.download=`${(state.title||state.docType||"requirement").replace(/[^a-z0-9]+/gi,"_")}_${state.docType}.doc`;
-  a.click(); toast("Word document downloaded");
+/* ============================ EXPORT (genuine DOCX) ============================ */
+let _docxLoading=null;
+function loadDocx(){
+  if(window.docx) return Promise.resolve();
+  if(_docxLoading) return _docxLoading;
+  _docxLoading=new Promise((resolve,reject)=>{
+    const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js";
+    s.onload=()=>window.docx?resolve():reject(new Error("The Word generator loaded but was unavailable."));
+    s.onerror=()=>reject(new Error("Could not load the Word (.docx) generator — this step needs an internet connection. Use Print / Save PDF instead."));
+    document.head.appendChild(s);
+  });
+  return _docxLoading;
+}
+function docxRuns(node,fmt){
+  const D=window.docx, runs=[];
+  node.childNodes.forEach(ch=>{
+    if(ch.nodeType===3){ const t=ch.textContent; if(t) runs.push(new D.TextRun(Object.assign({text:t},fmt))); }
+    else if(ch.nodeType===1){
+      const tag=ch.tagName.toLowerCase(), f=Object.assign({},fmt);
+      if(tag==="br"){ runs.push(new D.TextRun({text:"",break:1})); return; }
+      if(tag==="b"||tag==="strong") f.bold=true;
+      if(tag==="i"||tag==="em") f.italics=true;
+      if(ch.classList&&ch.classList.contains("cref")) f.font="Consolas";
+      if(ch.classList&&ch.classList.contains("ph")){ f.italics=true; f.color="9A6B16"; }
+      runs.push(...docxRuns(ch,f));
+    }
+  });
+  return runs.length?runs:[new D.TextRun(Object.assign({text:(node.textContent||"")},fmt))];
+}
+function docxTable(tbl){
+  const D=window.docx, rows=[];
+  tbl.querySelectorAll("tr").forEach(tr=>{
+    const cells=[]; let hdr=false;
+    Array.from(tr.children).forEach(td=>{
+      const isH=td.tagName.toLowerCase()==="th"; if(isH) hdr=true;
+      cells.push(new D.TableCell({ margins:{top:40,bottom:40,left:90,right:90}, shading:isH?{type:D.ShadingType.CLEAR,color:"auto",fill:"EEF2F8"}:undefined, children:[new D.Paragraph({children:docxRuns(td,isH?{bold:true,size:18}:{size:18})})] }));
+    });
+    rows.push(new D.TableRow({children:cells,tableHeader:hdr}));
+  });
+  return new D.Table({ width:{size:100,type:D.WidthType.PERCENTAGE}, rows });
+}
+function docxMap(el,out){
+  const D=window.docx, tag=el.tagName.toLowerCase(), cls=el.className||"";
+  if(tag==="h1"){ out.push(new D.Paragraph({heading:D.HeadingLevel.TITLE,alignment:D.AlignmentType.CENTER,children:docxRuns(el,{bold:true})})); return; }
+  if(cls.indexOf("doc-sub")>=0){ out.push(new D.Paragraph({alignment:D.AlignmentType.CENTER,spacing:{after:200},children:docxRuns(el,{italics:true,color:"666666"})})); return; }
+  if(cls.indexOf("toc")>=0){ out.push(new D.Paragraph({spacing:{before:120,after:80},children:[new D.TextRun({text:"Contents",bold:true})]})); out.push(new D.TableOfContents("Contents",{hyperlink:true,headingStyleRange:"1-2"})); out.push(new D.Paragraph({text:"",spacing:{after:160}})); return; }
+  if(tag==="h2"){ out.push(new D.Paragraph({heading:D.HeadingLevel.HEADING_1,spacing:{before:220,after:80},children:docxRuns(el,{})})); return; }
+  if(tag==="h3"){ out.push(new D.Paragraph({heading:D.HeadingLevel.HEADING_2,spacing:{before:120,after:40},children:docxRuns(el,{})})); return; }
+  if(tag==="p"){ out.push(new D.Paragraph({spacing:{after:120},children:docxRuns(el,{})})); return; }
+  if(tag==="ul"){ el.querySelectorAll(":scope > li").forEach(li=>out.push(new D.Paragraph({bullet:{level:0},spacing:{after:40},children:docxRuns(li,{})}))); return; }
+  if(tag==="table"){ out.push(docxTable(el)); out.push(new D.Paragraph({text:"",spacing:{after:80}})); return; }
+  if(el.children&&el.children.length){ Array.from(el.children).forEach(c=>docxMap(c,out)); return; }
+  const t=(el.textContent||"").trim(); if(t) out.push(new D.Paragraph({children:docxRuns(el,{})}));
+}
+function buildDocxBlob(){
+  const D=window.docx;
+  const box=document.createElement("div"); box.innerHTML=renderDocumentHTML();
+  const children=[]; Array.from(box.children).forEach(el=>docxMap(el,children));
+  const footer=new D.Footer({children:[new D.Paragraph({alignment:D.AlignmentType.CENTER,children:[new D.TextRun({size:16,color:"888888",children:["Page ",D.PageNumber.CURRENT," of ",D.PageNumber.TOTAL_PAGES]})]})]});
+  const doc=new D.Document({
+    features:{updateFields:true},
+    styles:{default:{document:{run:{font:"Calibri",size:22}}}},
+    sections:[{ properties:{ page:{ margin:{top:1080,bottom:1080,left:1440,right:1440} } }, footers:{default:footer}, children }]
+  });
+  return D.Packer.toBlob(doc);
+}
+async function exportWord(){
+  try{
+    toast("Preparing Word document…");
+    await loadDocx();
+    const blob=await buildDocxBlob();
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download=`${(state.title||state.docType||"requirement").replace(/[^a-z0-9]+/gi,"_")}_${state.docType}.docx`;
+    a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); toast("Word (.docx) downloaded");
+  }catch(e){ alert(e&&e.message?e.message:"Word export failed. Try Print / Save PDF instead."); }
 }
 function printDoc(){ window.print(); }
 
