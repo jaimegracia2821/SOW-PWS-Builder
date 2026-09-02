@@ -312,6 +312,8 @@
 /* ---- MAINTENANCE: update these two lines when you review regulatory content ---- */
 const ASOF = "Jul 2026";              // stamp shown on every citation token
 const REVIEWED = "18 July 2026";      // stamp shown in the footer
+const FAC = "FAC 2026-01, effective 13 March 2026"; // codified FAR revision stamp
+const FAR_INDEX = "https://www.acquisition.gov/browse/index/far";
 /* ------------------------------------------------------------------------------- */
 const FAR_OVERHAUL = "https://www.acquisition.gov/far-overhaul";
 const DEV_GUIDE = "https://www.acquisition.gov/far-overhaul/far-part-deviation-guide";
@@ -1366,6 +1368,17 @@ function domainRefs(){
   const keys={services:(state.b.svcSca==="yes"?["svc_part","sca"]:["svc_part"]),construction:["con_part","davis","miller","magnitude"],ae:["con_part","brooks","aefee"],rnd:["rnd_part","datarights"]}[state.domain]||[];
   return keys.map(k=>({id:citeText(k).split(" / ")[0],title:CITES[k].note}));
 }
+function codifiedAuthItems(){
+  const items=[{id:"48 CFR (FAR)", name:`Federal Acquisition Regulation, as published (${FAC}).`, url:FAR_INDEX}];
+  const general=["results","pba","fp_pref","commercial","safeguard"];
+  const domainMap={ it:[], services:["svc_part","sca","pers_svc"], construction:["con_part","magnitude","davis","miller","brooks"], ae:["con_part","brooks","aefee"], rnd:["rnd_part","datarights"] };
+  const seen=new Set();
+  [...general, ...(domainMap[state.domain]||[])].forEach(k=>{
+    const c=CITES[k]; if(!c||seen.has(k)) return; seen.add(k);
+    items.push({id:c.legacy.split(" / ")[0], name:c.note, url:FAR_INDEX});
+  });
+  return items;
+}
 
 function buildDocSections(){
   const b=state.b, isPWS=state.docType==="PWS";
@@ -1457,7 +1470,7 @@ function applicableDocs(){
     `<tr><td class="mono" style="white-space:nowrap"><span class="cref">${esc(a.id)}</span></td><td>${esc(a.name)}</td><td class="asof-stamp">as of ${esc(a.asof)}</td></tr>`).join("");
   const dev = state.regime==="rfo"?`<tr><td class="mono"><span class="cref">${esc(state.devNo||"[agency deviation]")}</span></td><td>${esc(agency().devSeries)} adopting RFO model text in lieu of the codified part${state.devDate?` (eff. ${esc(state.devDate)})`:""}</td><td class="asof-stamp">verify at acquisition.gov/far-overhaul</td></tr>`:"";
   const dref = domainRefs().map(r=>`<tr><td class="mono"><span class="cref">${esc(r.id)}</span></td><td>${esc(r.title)}</td><td class="asof-stamp">${esc(dom()?dom().label:"")}</td></tr>`).join("");
-  return `<table class="d"><thead><tr><th>Reference</th><th>Title</th><th>Currency</th></tr></thead><tbody>${state.regime==="rfo"?rows+dev:`<tr><td class="mono"><span class="cref">48 CFR (FAR)</span></td><td>Federal Acquisition Regulation, as published</td><td class="asof-stamp">codified</td></tr>`}${dref}</tbody></table>`;
+  return `<table class="d"><thead><tr><th>Reference</th><th>Title</th><th>Currency</th></tr></thead><tbody>${state.regime==="rfo"?rows+dev:`<tr><td class="mono"><span class="cref">48 CFR (FAR)</span></td><td>Federal Acquisition Regulation, as published</td><td class="asof-stamp">${esc(FAC)}</td></tr>`}${dref}</tbody></table>`;
 }
 function securitySection(){
   const b=state.b, parts=[];
@@ -1614,12 +1627,20 @@ function renderWorkspace(){
       <div class="card" style="padding:0"><pre style="margin:0;padding:18px;font-family:var(--mono);font-size:12px;overflow-x:auto;white-space:pre">${esc(justificationText())}</pre></div>
       <button class="btn" style="margin-top:12px" onclick="copyText(justificationText())">Copy stub</button>`;
   } else if(state.wsTab==="auth"){
-    body=`<p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Every RFO citation carries an "as of" date and a source link. Confirm against the source before release — the model text has moved repeatedly this year.</p>
-      <div class="authreg">${AUTHORITIES.filter(a=>state.regime==="rfo"||a.regime!=="rfo").map(a=>`
-        <div class="auth-item"><div class="lbl"><span class="cite ${a.regime==='rfo'?'rfo':'legacy'}">${esc(a.id)}<span class="asof">${esc(a.asof)}</span></span></div>
+    if(state.regime==="rfo"){
+      body=`<p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Every RFO citation carries an "as of" date and a source link. Confirm against the source before release — the model text has moved repeatedly this year.</p>
+      <div class="authreg">${AUTHORITIES.map(a=>`
+        <div class="auth-item"><div class="lbl"><span class="cite rfo">${esc(a.id)}<span class="asof">${esc(a.asof)}</span></span></div>
         <div class="meta"><div class="nm">${esc(a.name)}</div><div class="ds">${esc(a.ds)}</div><a href="${a.url}" target="_blank" rel="noopener">${a.url.replace('https://','')}</a></div></div>`).join("")}
-        ${state.regime==="rfo"?`<div class="auth-item"><div class="lbl"><span class="cite rfo">${esc(state.devNo||"[deviation]")}<span class="asof">${esc(state.devDate||"date?")}</span></span></div><div class="meta"><div class="nm">${esc(agency().name)} class deviation</div><div class="ds">${esc(agency().devSeries)}, adopting RFO model text in lieu of the codified part.</div><a href="${DEV_GUIDE}" target="_blank" rel="noopener">${DEV_GUIDE.replace('https://','')}</a></div></div>`:""}
+        <div class="auth-item"><div class="lbl"><span class="cite rfo">${esc(state.devNo||"[deviation]")}<span class="asof">${esc(state.devDate||"date?")}</span></span></div><div class="meta"><div class="nm">${esc(agency().name)} class deviation</div><div class="ds">${esc(agency().devSeries)}, adopting RFO model text in lieu of the codified part.</div><a href="${DEV_GUIDE}" target="_blank" rel="noopener">${DEV_GUIDE.replace('https://','')}</a></div></div>
       </div>`;
+    } else {
+      body=`<p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Codified FAR authorities for this ${esc(dom()?dom().label:"requirement")}. Current revision: <b>${esc(FAC)}</b>. Confirm each citation at acquisition.gov before release.</p>
+      <div class="authreg">${codifiedAuthItems().map(a=>`
+        <div class="auth-item"><div class="lbl"><span class="cite legacy">${esc(a.id)}<span class="asof">FAR</span></span></div>
+        <div class="meta"><div class="nm">${esc(a.name)}</div><a href="${a.url}" target="_blank" rel="noopener">${a.url.replace('https://','')}</a></div></div>`).join("")}
+      </div>`;
+    }
   } else if(state.wsTab==="pre"){
     const pf=preflight();
     body=pf.map(x=>`<div class="check ${x.status}"><div class="ic">${x.status==="pass"?"✓":x.status==="warn"?"!":"×"}</div><div class="body"><b>${esc(x.title)}</b><p>${esc(x.detail)}</p></div></div>`).join("");
