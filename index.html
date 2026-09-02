@@ -393,7 +393,7 @@ const state = {
       buildbuy:null, systems:"", integration:null, migration:null, ai:null,
       volume:"", users:null, growth:null,
       orgunits:"", phasing:null,
-      pop:null, oy:"4", basescope:null, clin:null, transition:null,
+      pop:null, oy:"4", basescope:null, clin:null, clinReimb:null, transition:null,
       aql:"", reporting:null,
       secFCI:"yes", secCUI:null, secClassified:null,
       // services
@@ -1094,6 +1094,12 @@ function renderBlock4(){
       ${opt("deliverable",b.clin,"By deliverable","each major deliverable = a CLIN",'onclick="setB(\'clin\',\'deliverable\')"')}
       ${opt("unsure",b.clin,"Unsure — recommend","tool defaults to by-period",'onclick="setB(\'clin\',\'unsure\')"')}
     </div>
+    <div class="q-label" style="margin-top:16px">Travel &amp; Other Direct Costs (ODCs)</div>
+    <div class="q-help">Added as cost-reimbursable CLINs only if you select them here — not added by default.</div>
+    <div class="opts">
+      ${opt("yes",b.clinReimb,"Reimbursable Travel/ODCs in scope","Adds Travel + ODC CLINs (NTE)",'onclick="setB(\'clinReimb\',\'yes\')"')}
+      ${opt("no",b.clinReimb,"None / priced within the fixed price","",'onclick="setB(\'clinReimb\',\'no\')"')}
+    </div>
   </div>
 
   <div class="card"><div class="q-label">Quality & oversight</div>
@@ -1408,12 +1414,7 @@ function buildDocSections(){
   domainSection3(S,isPWS,b);
 
   S("Deliverables",`<table class="d"><thead><tr><th>ID</th><th>Title</th><th>Format</th><th>Frequency</th><th>Acceptance criteria</th></tr></thead>
-    <tbody>
-      <tr><td>D-01</td><td>Monthly Status Report</td><td>PDF</td><td>Monthly</td><td>Complete, on time, ${state.docType==="PWS"?"meets content standard":"per task"}</td></tr>
-      ${(b.transition==="in"||b.transition==="both"||b.basescope==="rampup")?`<tr><td>D-02</td><td>Transition-In Plan</td><td>Document</td><td>Once, ${ph("NLT day 10")}</td><td>Approved by COR</td></tr>`:""}
-      ${(b.transition==="out"||b.transition==="both")?`<tr><td>D-03</td><td>Transition-Out Plan</td><td>Document</td><td>Once, ${ph("NLT 90 days before end")}</td><td>Approved by COR</td></tr>`:""}
-      <tr><td>D-04</td><td>System Documentation</td><td>Document</td><td>${ph("milestone")}</td><td>${ph("criteria")}</td></tr>
-    </tbody></table>`);
+    <tbody>${deliverablesList().map(d=>`<tr><td>${esc(d.id)}</td><td>${esc(d.title)}</td><td>${esc(d.fmt)}</td><td>${esc(d.freq)}</td><td>${esc(d.accept)}</td></tr>`).join("")}</tbody></table>`);
 
   domainExtraSections(S,b);
 
@@ -1528,6 +1529,14 @@ function staffingTableText(){
   state.staffing.forEach(r=>{ out+=`| ${r.lcat.padEnd(w)} | ${r.soc.padEnd(8)} | ${String(r.ftes).padEnd(4)} | ${r.phase.padEnd(10)} | ${r.hrs.padEnd(6)} | ${r.notes}\n`; });
   return out;
 }
+function deliverablesList(){
+  const b=state.b, L=[];
+  L.push({id:"D-01",title:"Monthly Status Report",fmt:"PDF",freq:"Monthly",accept:state.docType==="PWS"?"Complete, on time, meets content standard":"Complete, on time, per task"});
+  if(b.transition==="in"||b.transition==="both"||b.basescope==="rampup") L.push({id:"D-02",title:"Transition-In Plan",fmt:"Document",freq:"Once",accept:"Approved by COR"});
+  if(b.transition==="out"||b.transition==="both") L.push({id:"D-03",title:"Transition-Out Plan",fmt:"Document",freq:"Once",accept:"Approved by COR"});
+  L.push({id:"D-04",title:"System Documentation",fmt:"Document",freq:"Per milestone",accept:"Per acceptance criteria"});
+  return L;
+}
 function clinRows(){
   const b=state.b, oy=b.pop==="base_oy"?(parseInt(b.oy)||0):0, rows=[];
   const pref=b.clin==="unsure"?"period":b.clin;
@@ -1537,11 +1546,12 @@ function clinRows(){
   } else if(pref==="function"){
     ["Development","Operations","Maintenance","Training"].forEach((f,i)=>rows.push([`000${i+1}`,`${f}`,contractType52(),`${f} scope`]));
   } else {
-    rows.push(["0001","Primary Deliverable Set",contractType52(),"Per Section 4 deliverables"]);
-    rows.push(["0002","Secondary Deliverables",contractType52(),"Per Section 4 deliverables"]);
+    deliverablesList().forEach((d,i)=>rows.push([String(i+1).padStart(4,"0"),d.title,contractType52(),`${d.id} per Section 4 deliverables`]));
   }
-  rows.push(["X001","Travel","Cost-reimbursable (NTE)","FAR 31.205-46; no fee"]);
-  rows.push(["X002","ODCs","Cost-reimbursable (NTE)","Receipts required"]);
+  if(b.clinReimb==="yes"){
+    rows.push(["X001","Travel","Cost-reimbursable (NTE)","FAR 31.205-46; no fee"]);
+    rows.push(["X002","ODCs","Cost-reimbursable (NTE)","Receipts required"]);
+  }
   return rows;
 }
 function contractType52(){ return {FFP:"FFP",TM:"T&M",LH:"LH",CR:"Cost-reimbursable",CPFF:"CPFF",HYBRID:"Per CLIN"}[state.contractType]||"FFP"; }
