@@ -400,6 +400,7 @@ const state = {
       svcFunctions:"", svcSca:null, svcWorkload:"", svcSurge:null, svcPersonal:null,
       // construction
       conType:null, conDelivery:null, conMagnitude:null, conBond:null, conSite:"", conSustain:null, conEM385:null,
+      conDuration:"", conNTP:"", conSubstantial:"", conFinal:"",
       // A/E
       aePhases:[], aeDisciplines:"", aeConstCost:"", aeInvestigative:null, aeMilDept:null,
       // R&D
@@ -465,7 +466,7 @@ function block2Done(){
     default: return !!(b.buildbuy&&b.integration&&b.migration&&b.ai);
   }
 }
-function firstFourDone(){ const b=state.b; const b1=["it","services"].includes(state.domain)?(b.coverage&&b.delivery):true; return b1&&block2Done()&&b.pop&&b.clin&&b.reporting; }
+function firstFourDone(){ const b=state.b; const b1=["it","services"].includes(state.domain)?(b.coverage&&b.delivery):true; const struct=state.domain==="construction"?(b.clin&&b.reporting):(b.pop&&b.clin&&b.reporting); return b1&&block2Done()&&struct; }
 
 function go(i){ if(!stepUnlocked(i))return; state.step=i; window.scrollTo(0,0); render(); }
 function next(){ go(state.step+1); }
@@ -1042,7 +1043,7 @@ function renderBlock4(){
   <div class="phase-head"><div class="eyebrow">Step 6 · Blocks 4–6</div><h2>Structure & oversight</h2>
     <p>Period, CLIN preference (for the Section B handoff — never the document body), and quality metrics.</p></div>
 
-  <div class="card"><div class="q-label">Organizational scope</div>
+  ${state.domain==="construction"?"":`<div class="card"><div class="q-label">Organizational scope</div>
     <div class="field"><label>How many organizational units served?</label><input type="number" value="${esc(b.orgunits)}" placeholder="offices / centers / divisions" oninput="state.b.orgunits=this.value"></div>
     <div class="q-label" style="margin-top:16px">Phasing</div>
     <div class="opts">
@@ -1050,9 +1051,19 @@ function renderBlock4(){
       ${opt("phased",b.phasing,"Phased rollout","",'onclick="setB(\'phasing\',\'phased\')"')}
       ${opt("pilot",b.phasing,"Pilot then expand","",'onclick="setB(\'phasing\',\'pilot\')"')}
     </div>
-  </div>
+  </div>`}
 
-  <div class="card"><div class="q-label">Period of performance</div>
+  ${state.domain==="construction"?`<div class="card"><div class="q-label">Period of performance &amp; completion milestones</div>
+    <div class="q-help">Construction runs from Notice to Proceed to completion — not base/option years.</div>
+    <div class="grid-2">
+      <div class="field"><label>Overall period of performance</label><input type="text" value="${esc(b.conDuration)}" placeholder="e.g., 540 calendar days from NTP" oninput="state.b.conDuration=this.value"></div>
+      <div class="field"><label>Notice to Proceed (NTP)</label><input type="text" value="${esc(b.conNTP)}" placeholder="e.g., within 10 calendar days of award" oninput="state.b.conNTP=this.value"></div>
+    </div>
+    <div class="grid-2" style="margin-top:4px">
+      <div class="field"><label>Substantial completion</label><input type="text" value="${esc(b.conSubstantial)}" placeholder="e.g., NLT 480 days from NTP" oninput="state.b.conSubstantial=this.value"></div>
+      <div class="field"><label>Final completion</label><input type="text" value="${esc(b.conFinal)}" placeholder="e.g., NLT 540 days from NTP" oninput="state.b.conFinal=this.value"></div>
+    </div>
+  </div>`:`<div class="card"><div class="q-label">Period of performance</div>
     <div class="grid-2">
       <div class="field"><label>Structure</label>
         <div class="opts" style="grid-template-columns:1fr">
@@ -1073,7 +1084,7 @@ function renderBlock4(){
       ${opt("out",b.transition,"Transition-out plan","",'onclick="setB(\'transition\',\'out\')"')}
       ${opt("both",b.transition,"Both","",'onclick="setB(\'transition\',\'both\')"')}
     </div>
-  </div>
+  </div>`}
 
   <div class="card"><div class="q-label">CLIN structure preference</div>
     <div class="q-help">For the Section B handoff table only. CLINs never appear in the SOW/PWS body.</div>
@@ -1118,7 +1129,7 @@ function renderBlock4(){
     </div>
   </div>
 
-  ${navbar(!!(b.pop&&b.basescope&&b.transition&&b.clin&&b.reporting),"Derive staffing")}`;
+  ${navbar(state.domain==="construction"?!!(b.clin&&b.reporting):!!(b.pop&&b.basescope&&b.transition&&b.clin&&b.reporting),"Derive staffing")}`;
 }
 
 /* ============================ DERIVATION (domain dispatch) ============================ */
@@ -1248,7 +1259,7 @@ function renderSummary(){
       <tr><td style="color:var(--muted)">Document</td><td>${state.docType}${state.docType==="PWS"?" — performance-based":" — task-based"}</td></tr>
       <tr><td style="color:var(--muted)">Contract type</td><td>${contractLabel()} ${isCovered()?`<span class="badge-pill" style="color:var(--warn)">covered · 16.104</span>`:`<span class="badge-pill" style="color:var(--ok)">fixed-price</span>`}</td></tr>
       <tr><td style="color:var(--muted)">Commercial</td><td>${{commercial:"Commercial (FAR Part 12)",noncommercial:"Non-commercial (FAR Part 15)",unsure:"Determination pending — flagged for CO"}[state.commercial]}</td></tr>
-      <tr><td style="color:var(--muted)">Period</td><td>${b.pop==="base_oy"?`Base + ${b.oy} option years`:"Base year only"}</td></tr>
+      <tr><td style="color:var(--muted)">Period</td><td>${state.domain==="construction"?(esc(b.conDuration)||"Per completion milestones (NTP → final)"):(b.pop==="base_oy"?`Base + ${b.oy} option years`:"Base year only")}</td></tr>
     </tbody></table>
   </div>
 
@@ -1413,7 +1424,11 @@ function buildDocSections(){
       <tbody>${ceilingRows()}</tbody></table>`);
   }
 
-  S("Period of Performance",`<p>${b.pop==="base_oy"?`A base year and ${esc(b.oy)} option year(s), exercisable at the Government's discretion.`:"A single base period."} ${ph("insert dates")}</p>`);
+  if(state.domain==="construction"){
+    S("Period of Performance",`<p>The period of performance is ${b.conDuration?esc(b.conDuration):ph("overall period — e.g., 540 calendar days from NTP")}. The Government will issue a Notice to Proceed ${b.conNTP?esc(b.conNTP):ph("e.g., within 10 calendar days of award")}. Substantial completion shall be achieved ${b.conSubstantial?esc(b.conSubstantial):ph("substantial completion milestone")}; final completion and acceptance ${b.conFinal?esc(b.conFinal):ph("final completion milestone")}. ${ph("insert calendar dates")}</p>`);
+  } else {
+    S("Period of Performance",`<p>${b.pop==="base_oy"?`A base year and ${esc(b.oy)} option year(s), exercisable at the Government's discretion.`:"A single base period."} ${ph("insert dates")}</p>`);
+  }
   S("Place of Performance",`<p>${{single:"A single Government or contractor site.",multi:`${esc(b.sites)||ph("N")} sites.`,remote:"Primarily virtual/remote performance.",hybrid:"Hybrid on-site and remote."}[b.geo]||ph("place")} ${ph("addresses")}</p>`);
   S("Government-Furnished Property / Information",`<p>${ph("list GFP/GFE/GFI, or state None")}.</p>`);
   S("Security Requirements",securitySection());
