@@ -1340,14 +1340,14 @@ function domainSection3(S,isPWS,b){
     const phases=(b.aePhases||[]);
     S("Scope of Services — Architect-Engineer",`
       <p>The contractor shall provide architect-engineer design services (${cref("con_part")}), selected on the basis of qualifications (${cref("brooks")}). Disciplines: ${esc(b.aeDisciplines)||ph("list disciplines")}.</p>
-      ${phases.map((p,i)=>`<h3 class="sub">3.${i+1} ${esc(AE_PHASE_NAMES[p]||p)}</h3><p>The contractor shall produce and deliver the ${esc((AE_PHASE_NAMES[p]||p).toLowerCase())} submittal, including ${ph("required drawings, calculations, and specifications for this phase")}.</p>`).join("")||`<p>${ph("select design phases in Block 2")}</p>`}`);
+      ${phases.map((p,i)=>`<h3 class="sub">§§.${i+1} ${esc(AE_PHASE_NAMES[p]||p)}</h3><p>The contractor shall produce and deliver the ${esc((AE_PHASE_NAMES[p]||p).toLowerCase())} submittal, including ${ph("required drawings, calculations, and specifications for this phase")}.</p>`).join("")||`<p>${ph("select design phases in Block 2")}</p>`}`);
     return;
   }
   if(state.domain==="rnd"){
     S("Research Objectives and Tasks",`
       <p>This is a ${{basic:"basic research",applied:"applied research",development:"development"}[b.rdType]||"research"} effort (${cref("rnd_part")}). Work is described in terms of the research objective; technical results are not guaranteed. The Government does not prescribe staffing or level of detail beyond the stated objective.</p>
-      <h3 class="sub">3.1 Research Objective</h3><p>${esc(b.rdObjective)||ph("state the research objective / problem")}</p>
-      <h3 class="sub">3.2 Approach</h3><p>The contractor shall ${b.rdEffort==="loe"?"apply the agreed level of effort toward the objective over the period of performance":"pursue the objective toward the defined end item/prototype"}. ${ph("tasks / research thrusts")}</p>`);
+      <h3 class="sub">§§.1 Research Objective</h3><p>${esc(b.rdObjective)||ph("state the research objective / problem")}</p>
+      <h3 class="sub">§§.2 Approach</h3><p>The contractor shall ${b.rdEffort==="loe"?"apply the agreed level of effort toward the objective over the period of performance":"pursue the objective toward the defined end item/prototype"}. ${ph("tasks / research thrusts")}</p>`);
     return;
   }
   // IT & Services (and default) — PWS/SOW generic, with a services flavor note
@@ -1355,7 +1355,7 @@ function domainSection3(S,isPWS,b){
   if(isPWS){
     S("Requirements — Performance Objectives",`
       <p>Performance is described in terms of required outcomes and measurable standards (${cref("results")}). The contractor shall achieve the objectives below; the Government does not prescribe staffing, level of effort, or the number of personnel (${cref("pba")}).${svcNote}</p>
-      <h3 class="sub">3.1 ${ph("Objective title")}</h3>
+      <h3 class="sub">§§.1 ${ph("Objective title")}</h3>
       <p><b>Required outcome:</b> ${ph("what the contractor shall achieve")}<br>
       <b>Performance standard:</b> ${esc(b.aql)||ph("measurable threshold")}<br>
       <b>Acceptable Quality Level:</b> ${esc(b.aql)||ph("AQL")}<br>
@@ -1363,7 +1363,7 @@ function domainSection3(S,isPWS,b){
   } else {
     S("Requirements — Task Areas",`
       <p>The contractor shall perform the tasks below (${cref("results")}). Task descriptions state required results; they do not prescribe the number of personnel or hours.${svcNote}</p>
-      <h3 class="sub">3.1 ${ph("Task area title")}</h3>
+      <h3 class="sub">§§.1 ${ph("Task area title")}</h3>
       <p><b>Task description:</b> The contractor shall ${ph("verb + deliverable")}.<br>
       <b>Deliverables:</b> ${ph("mapped to Section 4")}<br>
       <b>Government-furnished resources:</b> ${ph("as listed in Section 8")}</p>`);
@@ -1410,13 +1410,13 @@ function codifiedAuthItems(){
 function buildDocSections(){
   const b=state.b, isPWS=state.docType==="PWS";
   const secs=[]; let n=0;
-  const S=(title,html)=>{ n++; secs.push({num:n,title,html}); };
+  const S=(title,html)=>{ n++; secs.push({num:n,title,html:html.replace(/§§/g,n)}); };
 
   S("Introduction",`
-    <h3 class="sub">1.1 Purpose</h3><p>This ${state.docType} sets forth the ${isPWS?"performance objectives and standards":"tasks and requirements"} for ${esc(state.title)||ph("requirement title")}.${state.contractType==="CPFF"?` This is a Cost-Plus-Fixed-Fee, <b>${state.cpffForm||ph("completion/term")} form</b> effort (${cref("cpff")}).`:""}</p>
-    <h3 class="sub">1.2 Background</h3><p>${esc(state.background)||ph("agency background and mission context")}</p>
-    <h3 class="sub">1.3 Scope Summary</h3><p>${scopeSummary()}</p>
-    <h3 class="sub">1.4 Applicable Documents and Standards</h3>${applicableDocs()}`);
+    <h3 class="sub">§§.1 Purpose</h3><p>This ${state.docType} sets forth the ${isPWS?"performance objectives and standards":"tasks and requirements"} for ${esc(state.title)||ph("requirement title")}.${state.contractType==="CPFF"?` This is a Cost-Plus-Fixed-Fee, <b>${state.cpffForm||ph("completion/term")} form</b> effort (${cref("cpff")}).`:""}</p>
+    <h3 class="sub">§§.2 Background</h3><p>${esc(state.background)||ph("agency background and mission context")}</p>
+    <h3 class="sub">§§.3 Scope Summary</h3><p>${scopeSummary()}</p>
+    <h3 class="sub">§§.4 Applicable Documents and Standards</h3>${applicableDocs()}`);
 
   S("Definitions and Acronyms",`<p>${ph("define program-specific terms")}. See Appendix D for the acronym list.</p>`);
 
@@ -1465,8 +1465,8 @@ function buildDocSections(){
 
   if(b.transition&&b.transition!=="none"){
     S("Transition",`
-      ${(b.transition==="in"||b.transition==="both")?`<h3 class="sub">13.1 Transition-In</h3><p>Knowledge transfer, incumbent cooperation, parallel operations. ${ph("duration")}</p>`:""}
-      ${(b.transition==="out"||b.transition==="both")?`<h3 class="sub">13.2 Transition-Out</h3><p>Data return, documentation, contractor cooperation. ${ph("timeline")}</p>`:""}`);
+      ${(b.transition==="in"||b.transition==="both")?`<h3 class="sub">§§.1 Transition-In</h3><p>Knowledge transfer, incumbent cooperation, parallel operations. ${ph("duration")}</p>`:""}
+      ${(b.transition==="out"||b.transition==="both")?`<h3 class="sub">§§.2 Transition-Out</h3><p>Data return, documentation, contractor cooperation. ${ph("timeline")}</p>`:""}`);
   }
 
   S("Constraints and Assumptions",`
