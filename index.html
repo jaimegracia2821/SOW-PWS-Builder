@@ -391,6 +391,7 @@ const state = {
       orgunits:"", phasing:null,
       pop:null, oy:"4", basescope:null, clin:null, transition:null,
       aql:"", reporting:null,
+      secFCI:"yes", secCUI:null, secClassified:null,
       // services
       svcFunctions:"", svcSca:null, svcWorkload:"", svcSurge:null, svcPersonal:null,
       // construction
@@ -1094,6 +1095,25 @@ function renderBlock4(){
       <input type="text" value="${esc(state.keyPersonnel)}" placeholder="Program Manager, Technical Lead, ISSO" oninput="state.keyPersonnel=this.value;state.keyEdited=true"></div>
   </div>
 
+  <div class="card"><div class="q-label">Security &amp; information safeguarding</div>
+    <div class="q-help">Only the items you select are written into the document. FAR 52.204-21 covers FCI only; CUI and classified content are added only when actually in scope.</div>
+    <div class="q-label" style="margin-top:6px;font-size:13px">Federal Contract Information (FCI)</div>
+    <div class="opts">
+      ${opt("yes",b.secFCI,"FCI present — apply FAR 52.204-21","Basic Safeguarding; default for most contracts",'onclick="setB(\'secFCI\',\'yes\')"')}
+      ${opt("no",b.secFCI,"No FCI (e.g., COTS only)","",'onclick="setB(\'secFCI\',\'no\')"')}
+    </div>
+    <div class="q-label" style="margin-top:14px;font-size:13px">Controlled Unclassified Information (CUI)</div>
+    <div class="opts">
+      ${opt("yes",b.secCUI,"CUI handled","DoD: DFARS 252.204-7012 + NIST SP 800-171; civilian: agency CUI policy",'onclick="setB(\'secCUI\',\'yes\')"')}
+      ${opt("no",b.secCUI,"No CUI","",'onclick="setB(\'secCUI\',\'no\')"')}
+    </div>
+    <div class="q-label" style="margin-top:14px;font-size:13px">Classified work</div>
+    <div class="opts">
+      ${opt("no",b.secClassified,"Unclassified","",'onclick="setB(\'secClassified\',\'no\')"')}
+      ${opt("yes",b.secClassified,"Classified in scope","DD Form 254 + 32 CFR Part 117 (NISPOM)",'onclick="setB(\'secClassified\',\'yes\')"')}
+    </div>
+  </div>
+
   ${navbar(!!(b.pop&&b.basescope&&b.transition&&b.clin&&b.reporting),"Derive staffing")}`;
 }
 
@@ -1440,8 +1460,19 @@ function applicableDocs(){
   return `<table class="d"><thead><tr><th>Reference</th><th>Title</th><th>Currency</th></tr></thead><tbody>${state.regime==="rfo"?rows+dev:`<tr><td class="mono"><span class="cref">48 CFR (FAR)</span></td><td>Federal Acquisition Regulation, as published</td><td class="asof-stamp">codified</td></tr>`}${dref}</tbody></table>`;
 }
 function securitySection(){
-  return `<p>The contractor shall safeguard information systems and controlled unclassified information per ${cref("safeguard")}${state.regime==="rfo"?" (and, where CUI is in scope, NIST SP 800-171)":""}. Personnel suitability: ${ph("Public Trust tier / clearance level")}.</p>
-  <p>${ph("If classified: a DD Form 254 will be issued at award and incorporated by reference; identify SCG, clearance by position, and incident-reporting timelines")}.</p>`;
+  const b=state.b, parts=[];
+  if(b.secFCI!=="no"){
+    parts.push(`<p>Federal Contract Information (FCI) shall be safeguarded on covered contractor information systems in accordance with ${cref("safeguard")} (Basic Safeguarding of Covered Contractor Information Systems). This clause addresses FCI only and does not establish Controlled Unclassified Information (CUI) requirements.</p>`);
+  }
+  if(b.secCUI==="yes"){
+    const dod = state.agencyKey==="DOD";
+    parts.push(`<p>Controlled Unclassified Information (CUI) is handled under this requirement. The contractor shall safeguard CUI in accordance with ${dod?"DFARS 252.204-7012 and NIST SP 800-171":"the requiring agency's CUI policy (and NIST SP 800-171 where incorporated)"}. ${ph("identify CUI categories and marking requirements")}.</p>`);
+  }
+  parts.push(`<p>Personnel suitability: ${ph("Public Trust tier / suitability level")}.</p>`);
+  if(b.secClassified==="yes"){
+    parts.push(`<p>Classified work is within scope. A DD Form 254 (Contract Security Classification Specification) will be issued at award and incorporated by reference, in accordance with 32 CFR Part 117 (NISPOM). ${ph("identify classification level, security classification guide (SCG), clearance by position, and incident-reporting timelines")}.</p>`);
+  }
+  return parts.join("\n  ");
 }
 function optionYearHeaders(){ const oy=state.b.pop==="base_oy"?(parseInt(state.b.oy)||0):0; let h=""; for(let i=1;i<=oy;i++)h+=`<th>OY${i}</th>`; return h; }
 function ceilingRows(){
