@@ -358,7 +358,7 @@ const CITES = {
   miller:    {legacy:"FAR 28.1 / 52.228-15", rfo:"RFO Part 28 (model deviation)", note:"Miller Act performance & payment bonds for construction over the threshold."},
   magnitude: {legacy:"FAR 36.204", rfo:"RFO Part 36 (model deviation)", note:"Disclose the magnitude (price range) of construction — not the Government estimate."},
   brooks:    {legacy:"FAR 36.6 / 40 U.S.C. 1101-1104", rfo:"RFO Part 36 (model dev.) / 40 U.S.C. 1101-1104", note:"Brooks Act — qualifications-based selection; price is not an initial selection factor."},
-  aefee:     {legacy:"FAR 15.404-4(c)(4)(i)(B) / 40 U.S.C. 1104(b)", rfo:"RFO Part 15 (model dev.) / 40 U.S.C. 1104(b)", note:"A/E design fee capped at 6% of estimated construction cost (civilian); DoD 10% per DFARS 236.606-70."},
+  aefee:     {legacy:"FAR 15.404-4(c)(4)(i)(B) / 40 U.S.C. 1104(b)", rfo:"RFO Part 15 (model dev.) / 40 U.S.C. 1104(b)", note:"A/E design fee capped at 6% of estimated construction cost; 10% for the Departments of the Army, Navy, or Air Force (10 U.S.C. 7540/8612/9540; DFARS 236.606-70)."},
   rnd_part:  {legacy:"FAR Part 35", rfo:"RFO Part 35 (model deviation)", note:"R&D contracting; flexible work statements; technical results are not guaranteed."},
   datarights:{legacy:"FAR Part 27 (27.4)", rfo:"RFO Part 27 (model deviation)", note:"Rights in technical data and computer software."}
 };
@@ -372,7 +372,11 @@ const DOMAINS = {
   rnd:         {label:"Research & Development", blurb:"Basic/applied research or development (FAR Part 35); outcome uncertain.", doc:"SOW", type:"CR"}
 };
 function dom(){ return state.domain?DOMAINS[state.domain]:null; }
-function aeFeePct(){ return state.agencyKey==="DOD"?10:6; }
+function aeFeePct(){
+  if(state.b.aeMilDept==="yes") return 10;
+  if(state.b.aeMilDept==="no") return 6;
+  return /\b(army|usace|navy|naval|navfac|usmc|marine\s*corps|air\s*force|usaf|afcec|space\s*force)\b/i.test(state.agencyName||"") ? 10 : 6;
+}
 
 /* ============================ STATE ============================ */
 const state = {
@@ -392,7 +396,7 @@ const state = {
       // construction
       conType:null, conDelivery:null, conMagnitude:null, conBond:null, conSite:"", conSustain:null, conEM385:null,
       // A/E
-      aePhases:[], aeDisciplines:"", aeConstCost:"", aeInvestigative:null,
+      aePhases:[], aeDisciplines:"", aeConstCost:"", aeInvestigative:null, aeMilDept:null,
       // R&D
       rdType:null, rdObjective:"", rdEffort:null, rdData:null, rdProto:null, rdVehicle:null },
   keyPersonnel:"Program Manager",
@@ -594,7 +598,7 @@ function domainComplianceCallout(){
       <li>Use SF-1442, not the UCF. This is drafted as an SOW referencing drawings & specifications.</li></ul></div>`;
     case "ae": return `<div class="callout info"><h4>A/E — Brooks Act procurement</h4><ul>
       <li>Selection is <b>qualifications-based</b> ${citeToken("brooks")} — price is not an initial evaluation factor; you negotiate with the most-qualified firm. Offerors submit SF-330.</li>
-      <li>Design fee for producing plans/specs is capped at <b>${aeFeePct()}%</b> of estimated construction cost ${citeToken("aefee")}${state.agencyKey==="DOD"?" (DoD 10% tier)":""}. Investigative/feasibility services are excluded from the cap.</li></ul></div>`;
+      <li>Design fee for producing plans/specs is capped at <b>${aeFeePct()}%</b> of estimated construction cost ${citeToken("aefee")}${aeFeePct()===10?" (Army/Navy/Air Force — 10% tier)":""}. The 10% ceiling applies only when the requiring activity is the Department of the Army, Navy, or Air Force; civilian agencies and other DoD components use 6%. Investigative/feasibility services are excluded from the cap.</li></ul></div>`;
     case "rnd": return `<div class="callout info"><h4>R&D — Part 35 framing</h4><ul>
       <li>Work is described in terms of the <b>research objective</b>, not a guaranteed end product ${citeToken("rnd_part")}. Cost-reimbursement / level-of-effort is common.</li>
       <li>Address rights in technical data & software up front ${citeToken("datarights")}.</li>
@@ -888,7 +892,13 @@ function b2_ae(){
   </div>
 
   <div class="card"><div class="q-label">Basis of fee ${citeToken("aefee")}</div>
-    <div class="grid-2">
+    <div class="q-help">Which fee ceiling applies? The 10% ceiling is limited to the Departments of the Army, Navy, or Air Force; civilian agencies and other DoD components use 6%.</div>
+    <div class="opts">
+      ${opt("yes",b.aeMilDept,"Army, Navy, or Air Force — 10% ceiling","A military department (incl. USACE, NAVFAC, AFCEC)",'onclick="setB(\'aeMilDept\',\'yes\')"')}
+      ${opt("no",b.aeMilDept,"Civilian or other DoD component — 6% ceiling","",'onclick="setB(\'aeMilDept\',\'no\')"')}
+    </div>
+    ${b.aeMilDept===null?`<p class="hint">Not selected — defaulting to <b>${aeFeePct()}%</b>, auto-detected from the requiring activity \u201C${esc(state.agencyName)||"(not entered)"}\u201D. Choose above to set it explicitly.</p>`:""}
+    <div class="grid-2" style="margin-top:14px">
       <div class="field inline-mono"><label>Estimated construction cost (ECC)</label>
         <input type="text" value="${esc(b.aeConstCost)}" placeholder="e.g., 30M" oninput="state.b.aeConstCost=this.value;render()"></div>
       <div class="field"><label>${aeFeePct()}% design-fee ceiling on ECC</label>
@@ -1255,7 +1265,7 @@ function collectDefaults(){
   if(state.domain==="services"&&b.svcPersonal==="review") d.push({t:"Personal-services determination pending",r:"Confirm no employer-employee relationship; flag for CO."});
   if(state.domain==="construction") d.push({t:`Magnitude disclosed as ${magnitudeText(b.conMagnitude)}`,r:"Range disclosed in lieu of Government estimate (FAR 36.204)."});
   if(state.domain==="construction") d.push({t:"Davis-Bacon wage determination to attach",r:"Construction wage rates apply."});
-  if(state.domain==="ae") d.push({t:`A/E design fee ceiling: ${aeFeePct()}% of ECC`,r:`Statutory limit${state.agencyKey==="DOD"?" (DoD 10% tier)":""}; investigative services excluded.`});
+  if(state.domain==="ae") d.push({t:`A/E design fee ceiling: ${aeFeePct()}% of ECC`,r:`Statutory limit${aeFeePct()===10?" (Army/Navy/Air Force 10% tier)":" (6% — civilian or non-military-department DoD)"}; investigative services excluded.`});
   if(state.domain==="rnd"&&b.rdData==="tbd") d.push({t:"Data rights to be negotiated",r:"Identify rights in technical data/software before award."});
   if(!b.aql&&["it","services"].includes(state.domain)) d.push({t:"AQLs to be finalized",r:"No AQL entered; placeholder inserted for CO/program office."});
   d.push({t:`Standard work year: 1,880 productive hours`,r:"Used in derivation basis; not stated in the document body."});
