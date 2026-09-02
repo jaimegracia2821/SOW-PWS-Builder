@@ -340,7 +340,7 @@ const AUTHORITIES = [
 
 // Citation resolver: key -> {legacy, rfo, note}
 const CITES = {
-  results:   {legacy:"FAR 37.102(d)", rfo:"RFO Part 37 (model deviation)", note:"Describe the requirement in terms of results, not hours or number of people. Principle survives the rewrite."},
+  results:   {legacy:"FAR 11.002", rfo:"RFO Part 11 (model deviation)", note:"Describe the requirement in terms of functions, performance, or results — not the number of hours or personnel (FAR 11.002). For a PWS, results-orientation is FAR 37.602(b)(1); keeping staffing out of the requirement body is a drafting practice."},
   pba:       {legacy:"FAR 37.602", rfo:"RFO Part 37 (model deviation)", note:"Performance-based description preference."},
   qa:        {legacy:"FAR 46.401", rfo:"RFO Part 46 (model deviation)", note:"Quality assurance / surveillance basis (PWS)."},
   inspect:   {legacy:"FAR 52.246-series", rfo:"RFO Part 46 / 52 (model deviation)", note:"Inspection & acceptance basis (SOW)."},
@@ -349,7 +349,7 @@ const CITES = {
   cpff:      {legacy:"FAR 16.306(d)", rfo:"RFO Part 16 (model deviation)", note:"CPFF completion (d)(1) vs term (d)(2) form commitment."},
   commercial:{legacy:"FAR Part 12 / 52.212-4", rfo:"RFO Part 12 (model deviation)", note:"Commercial product/service terms."},
   safeguard: {legacy:"FAR 52.204-21", rfo:"RFO Part 4 / 52 (model deviation)", note:"Basic safeguarding of contractor information systems."},
-  keypers:   {legacy:"agency supplement (e.g., HSAR 3052.237-72)", rfo:"agency supplement + RFO Part 37", note:"Key personnel substitution — never cite FAR 52.237-2."},
+  keypers:   {legacy:"applicable agency key personnel/substitution clause", rfo:"applicable agency clause + RFO Part 37", note:"Key personnel substitution — insert the applicable agency clause."},
   svc_part:  {legacy:"FAR Part 37", rfo:"RFO Part 37 (model deviation)", note:"Service contracting; performance-based preference."},
   sca:       {legacy:"FAR 22.10 / 52.222-41", rfo:"RFO Part 22 (model deviation)", note:"Service Contract Labor Standards — DOL wage determination sets minimum wages/benefits."},
   pers_svc:  {legacy:"FAR 37.104", rfo:"RFO Part 37 (model deviation)", note:"Personal-services contracts are generally prohibited absent specific statutory authority."},
@@ -1321,6 +1321,7 @@ function domainExtraSections(S,b){
     if(b.conBond==="miller"){
       S("Bonding",`<p>Performance and payment bonds are required (${cref("miller")}). The contractor shall furnish bonds in the penal amounts stated in ${ph("the solicitation")} prior to commencing work.</p>`);
     }
+    S("Permits and Site Protection",`<p>The contractor shall obtain necessary permits and assume the responsibilities set forth in FAR 52.236-7 (Permits and Responsibilities), and shall protect existing vegetation, structures, equipment, utilities, and improvements in accordance with FAR 52.236-9 (Protection of Existing Vegetation, Structures, Equipment, Utilities, and Improvements). ${ph("identify site-specific protections and existing conditions")}.</p>`);
   }
   if(state.domain==="ae"){
     S("Basis of Fee",`<p>The fee for producing and delivering designs, plans, drawings, and specifications shall not exceed <b>${aeFeePct()}%</b> of the estimated construction cost of ${b.aeConstCost?money(parseMoney(b.aeConstCost)):ph("ECC")} — a ceiling of ${b.aeConstCost?money(parseMoney(b.aeConstCost)*aeFeePct()/100):ph("cap")} (${cref("aefee")}).${b.aeInvestigative==="yes"?" Investigative and feasibility services are excluded from this limitation.":""}</p>`);
@@ -1374,7 +1375,7 @@ function buildDocSections(){
   S("Security Requirements",securitySection());
 
   S("Key Personnel",`
-    <p>The following roles are designated key personnel with minimum qualifications; the Government does not quantify the workforce here (${cref("results")}). Substitution of any key personnel requires prior written approval of the Contracting Officer (${cref("keypers")} — <b>not</b> FAR 52.237-2).</p>
+    <p>The following roles are designated key personnel with minimum qualifications.${isPWS?" Requirements are described in terms of the results required (FAR 37.602(b)(1))." : ""} Substitution of any key personnel requires prior written approval of the Contracting Officer under the applicable agency clause: ${ph("Key personnel/substitution clause — insert applicable agency clause")}.</p>
     <ul class="dl">${state.keyPersonnel.split(/[,;\n]/).map(r=>r.trim()).filter(Boolean).map(r=>`<li><b>${esc(r)}</b> — ${ph("minimum qualifications")}</li>`).join("")}</ul>`);
 
   S("Reporting and Oversight",`<p>Reporting cadence: <b>${b.reporting||ph("cadence")}</b>. Meetings: kickoff, ${b.reporting==="weekly"?"weekly status, ":""}monthly program review${ph(", quarterly executive review")}. ${ph("points of contact")}</p>`);
