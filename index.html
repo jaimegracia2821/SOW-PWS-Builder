@@ -1290,7 +1290,6 @@ function collectDefaults(){
   if(state.domain==="ae") d.push({t:`A/E design fee ceiling: ${aeFeePct()}% of ECC`,r:`Statutory limit${aeFeePct()===10?" (Army/Navy/Air Force 10% tier)":" (6% — civilian or non-military-department DoD)"}; investigative services excluded.`});
   if(state.domain==="rnd"&&b.rdData==="tbd") d.push({t:"Data rights to be negotiated",r:"Identify rights in technical data/software before award."});
   if(!b.aql&&["it","services"].includes(state.domain)) d.push({t:"AQLs to be finalized",r:"No AQL entered; placeholder inserted for CO/program office."});
-  d.push({t:`Standard work year: 1,880 productive hours`,r:"Used in derivation basis; not stated in the document body."});
   return d;
 }
 
@@ -1407,7 +1406,7 @@ function buildDocSections(){
 
   if(state.contractType==="TM"||state.contractType==="LH"){
     S("Labor Category Ceiling Hours",`
-      <p>Per ${cref("ceiling")}, the following labor categories and ceiling hours are provided for offerors to propose rates against. This is a pricing risk-sharing mechanism, <b>not</b> an FTE estimate or staffing prescription — no SOC codes, FTE counts, or derivation basis appear here.</p>
+      <p>Per ${cref("ceiling")}, the following labor categories and ceiling hours are provided for offerors to propose rates against. This is a pricing risk-sharing mechanism, <b>not</b> a staffing estimate or prescription — no labor-category counts, occupational codes, or derivation basis appear here.</p>
       <table class="d"><thead><tr><th>Labor category</th><th>Base</th>${optionYearHeaders()}<th>Total ceiling</th></tr></thead>
       <tbody>${ceilingRows()}</tbody></table>`);
   }
