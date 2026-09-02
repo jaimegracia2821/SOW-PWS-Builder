@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -472,8 +471,9 @@ function firstFourDone(){ const b=state.b; const b1=["it","services"].includes(s
 function go(i){ if(!stepUnlocked(i))return; state.step=i; window.scrollTo(0,0); render(); }
 function next(){ go(state.step+1); }
 function prev(){ go(state.step-1); }
-function set(k,v){ state[k]=v; render(); }
-function setB(k,v){ state.b[k]=v; render(); }
+function invalidateApproval(){ if(state.summaryApproved||state.generated){ state.summaryApproved=false; state.generated=false; } }
+function set(k,v){ invalidateApproval(); state[k]=v; render(); }
+function setB(k,v){ invalidateApproval(); state.b[k]=v; render(); }
 
 function render(){
   renderRail();
@@ -920,7 +920,7 @@ function b2_ae(){
 
   ${navbar(!!(phases.length && b.aeConstCost!==""))}`;
 }
-function toggleAePhase(p){ const a=state.b.aePhases||(state.b.aePhases=[]); const i=a.indexOf(p); i>=0?a.splice(i,1):a.push(p); render(); }
+function toggleAePhase(p){ invalidateApproval(); const a=state.b.aePhases||(state.b.aePhases=[]); const i=a.indexOf(p); i>=0?a.splice(i,1):a.push(p); render(); }
 
 /* --- Block 2: R&D --- */
 function b2_rnd(){
@@ -1760,6 +1760,7 @@ function loadDraft(file,fromGate){
 
 /* boot */
 const lrEl = document.getElementById("lastReviewed"); if(lrEl) lrEl.textContent = REVIEWED;
+document.addEventListener("input", (e)=>{ if(state.step<=5 && e.target && e.target.matches && e.target.matches("input,textarea")) invalidateApproval(); }, true);
 render();
 </script>
 </body>
