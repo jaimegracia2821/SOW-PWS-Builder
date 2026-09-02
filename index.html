@@ -395,6 +395,7 @@ const state = {
       orgunits:"", phasing:null,
       pop:null, oy:"4", basescope:null, clin:null, clinReimb:null, transition:null,
       aql:"", reporting:null,
+      placeOfPerf:"", appendices:"",
       secFCI:"yes", secCUI:null, secClassified:null,
       // services
       svcFunctions:"", svcSca:null, svcWorkload:"", svcSurge:null, svcPersonal:null,
@@ -1116,6 +1117,14 @@ function renderBlock4(){
       <input type="text" value="${esc(state.keyPersonnel)}" placeholder="Program Manager, Technical Lead, ISSO" oninput="state.keyPersonnel=this.value;state.keyEdited=true"></div>
   </div>
 
+  <div class="card"><div class="q-label">Place of performance &amp; appendices</div>
+    <div class="q-help">These are written into the document exactly as entered — not overwritten by defaults.</div>
+    <div class="field"><label>Primary place(s) of performance — site(s) and addresses</label>
+      <input type="text" value="${esc(b.placeOfPerf)}" placeholder="e.g., Building 401, Fort Belvoir, VA; and contractor facility" oninput="state.b.placeOfPerf=this.value"></div>
+    <div class="field"><label>Appendices to attach (leave blank for domain defaults)</label>
+      <input type="text" value="${esc(b.appendices)}" placeholder="e.g., A: Drawings & Specifications; B: Wage Determination; C: Site Data" oninput="state.b.appendices=this.value"></div>
+  </div>
+
   <div class="card"><div class="q-label">Security &amp; information safeguarding</div>
     <div class="q-help">Only the items you select are written into the document. FAR 52.204-21 covers FCI only; CUI and classified content are added only when actually in scope.</div>
     <div class="q-label" style="margin-top:6px;font-size:13px">Federal Contract Information (FCI)</div>
@@ -1430,7 +1439,7 @@ function buildDocSections(){
   } else {
     S("Period of Performance",`<p>${b.pop==="base_oy"?`A base year and ${esc(b.oy)} option year(s), exercisable at the Government's discretion.`:"A single base period."} ${ph("insert dates")}</p>`);
   }
-  S("Place of Performance",`<p>${{single:"A single Government or contractor site.",multi:`${esc(b.sites)||ph("N")} sites.`,remote:"Primarily virtual/remote performance.",hybrid:"Hybrid on-site and remote."}[b.geo]||ph("place")} ${ph("addresses")}</p>`);
+  S("Place of Performance",`<p>${b.placeOfPerf?esc(b.placeOfPerf):`${{single:"A single Government or contractor site.",multi:`${esc(b.sites)||ph("N")} sites.`,remote:"Primarily virtual/remote performance.",hybrid:"Hybrid on-site and remote."}[b.geo]||ph("place")} ${ph("addresses")}`}</p>`);
   S("Government-Furnished Property / Information",`<p>${ph("list GFP/GFE/GFI, or state None")}.</p>`);
   S("Security Requirements",securitySection());
 
@@ -1438,7 +1447,7 @@ function buildDocSections(){
     <p>The following roles are designated key personnel with minimum qualifications.${isPWS?" Requirements are described in terms of the results required (FAR 37.602(b)(1))." : ""} Substitution of any key personnel requires prior written approval of the Contracting Officer under the applicable agency clause: ${ph("Key personnel/substitution clause — insert applicable agency clause")}.</p>
     <ul class="dl">${state.keyPersonnel.split(/[,;\n]/).map(r=>r.trim()).filter(Boolean).map(r=>`<li><b>${esc(r)}</b> — ${ph("minimum qualifications")}</li>`).join("")}</ul>`);
 
-  S("Reporting and Oversight",`<p>Reporting cadence: <b>${b.reporting||ph("cadence")}</b>. Meetings: kickoff, ${b.reporting==="weekly"?"weekly status, ":""}monthly program review${ph(", quarterly executive review")}. ${ph("points of contact")}</p>`);
+  S("Reporting and Oversight",`<p>Reporting cadence: <b>${b.reporting?esc(b.reporting):ph("cadence")}</b>. Meetings: kickoff and ${b.reporting?esc(b.reporting):ph("periodic")} program reviews${ph(", plus executive reviews as needed")}. ${ph("points of contact")}</p>`);
 
   if(state.domain==="construction"){
     S("Inspection and Acceptance",`
@@ -1511,6 +1520,18 @@ function ceilingRows(){
   return cats.map(c=>`<tr><td>${esc(c)}</td><td>${ph("hrs")}</td>${Array(oy).fill(`<td>${ph("hrs")}</td>`).join("")}<td>${ph("total")}</td></tr>`).join("")||`<tr><td>${ph("labor category")}</td><td>${ph("hrs")}</td>${Array(oy).fill(`<td>${ph("hrs")}</td>`).join("")}<td>${ph("total")}</td></tr>`;
 }
 
+function appendicesText(){
+  const b=state.b;
+  if(b.appendices && b.appendices.trim()) return b.appendices.trim();
+  const defaults={
+    it:"A: Current Environment · B: Volume Data · C: Interface Specifications · D: Acronym List",
+    services:"A: Current Environment · B: Workload Data · C: Acronym List",
+    construction:"A: Drawings & Specifications · B: Wage Determination · C: Site / Geotechnical Data · D: Acronym List",
+    ae:"A: Program Requirements · B: Site Survey Data · C: Applicable Codes & Standards · D: Acronym List",
+    rnd:"A: Objective / Approach Detail · B: Data Rights Assertions · C: Acronym List"
+  };
+  return (defaults[state.domain]||"A: Acronym List")+" (include only those applicable).";
+}
 function renderDocumentHTML(){
   const secs=buildDocSections();
   const toc = secs.length>8?`<div class="toc"><b style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)">Contents</b>${secs.map(s=>`<div>${s.num}. ${esc(s.title)}</div>`).join("")}</div>`:"";
@@ -1518,7 +1539,7 @@ function renderDocumentHTML(){
     <div class="doc-sub">${esc(state.title)||"[Requirement Title]"} · ${esc(state.agencyName)||"[Program Office]"}${state.regime==="rfo"?` · governed by ${esc(state.devNo||"agency RFO class deviation")}`:""}</div>
     ${toc}
     ${secs.map(s=>`<h2 class="sec">${s.num}. ${esc(s.title)}</h2>${s.html}`).join("")}
-    <h2 class="sec">Appendices</h2><p style="font-size:12.5px;color:var(--muted)">A: Current Environment · B: Volume Data · C: Interface Specifications · D: Acronym List (include only those applicable).</p>`;
+    <h2 class="sec">Appendices</h2><p style="font-size:12.5px;color:var(--muted)">${esc(appendicesText())}</p>`;
 }
 
 /* ============================ HANDOFFS ============================ */
