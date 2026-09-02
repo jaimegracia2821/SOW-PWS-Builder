@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -251,6 +252,7 @@
     <h2>SOW / PWS Builder</h2>
     <p class="lede">Make the scope decisions; the tool assembles a structured draft Statement of Work or Performance Work Statement — with citations that resolve to either the codified FAR or the Revolutionary FAR Overhaul, an EO 14402 fixed-price gate, and staffing and CLIN data kept out of the requirement body by design.</p>
     <div class="discl">
+      <p style="margin:0 0 10px;color:#cdd8e2">This tool produces a structured first draft to accelerate your requirement. It is a drafting aid, not a finished document or legal advice. A contracting officer must review, complete, and validate every section before use.</p>
       <b>Before you start — read this:</b>
       <ul>
         <li>This is an <b>independent drafting aid</b>, not an official Government system and not legal or contracting advice.</li>
@@ -264,7 +266,7 @@
       <button class="load" onclick="document.getElementById('loadFileGate').click()">Load saved draft</button>
       <input type="file" id="loadFileGate" accept="application/json" style="display:none" onchange="loadDraft(this.files[0],true)">
     </div>
-    <div class="foot">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener" style="color:#9fb0bf">James Jenrette · 1102tools.com</a> (MIT).<br>Runs offline · single file · v1.0 · © The Wolverine Group, Inc.</div>
+    <div class="foot">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener" style="color:#9fb0bf">James Jenrette · 1102tools.com</a> (MIT).<br>Runs offline · single file · v2.0 · © The Wolverine Group, Inc.</div>
   </div>
 </div>
 
@@ -274,7 +276,7 @@
       <div class="brand-mark">§</div>
       <div>
         <h1>SOW / PWS Builder</h1>
-        <div class="sub">RFO-aware · v1</div>
+        <div class="sub">RFO-aware · v2</div>
       </div>
     </div>
     <div class="rail-note">Scope decisions in, a structured draft requirement out. Staffing, CLINs, and the 16.104 justification stay out of the document body by design.</div>
@@ -296,12 +298,8 @@
     </div>
     <div class="content" id="content"></div>
     <footer class="sitefoot">
-      <span class="v">SOW / PWS Builder v1.0 · regulatory content last reviewed <span id="lastReviewed"></span></span>
-      <span class="disc">Independent drafting aid — not an official Government system, and not legal or contracting advice. Citations current as of the review date above; the RFO model text changes often — verify against the source before release at <a href="https://www.acquisition.gov/far-overhaul" target="_blank" rel="noopener">acquisition.gov/far-overhaul ↗</a>
-This tool produces a structured first draft to accelerate your
-requirement. It is a drafting aid, not a finished document or legal
-advice. A contracting officer must review, complete, and validate
-every section before use. </span>
+      <span class="v">SOW / PWS Builder v2.0 · regulatory content last reviewed <span id="lastReviewed"></span></span>
+      <span class="disc">Independent drafting aid — not an official Government system, and not legal or contracting advice. Citations current as of the review date above; the RFO model text changes often — verify against the source before release at <a href="https://www.acquisition.gov/far-overhaul" target="_blank" rel="noopener">acquisition.gov/far-overhaul ↗</a></span>
       <span class="disc">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener">James Jenrette · 1102tools.com</a> (MIT). Maintained independently by The Wolverine Group, Inc.</span>
     </footer>
   </div>
@@ -1381,13 +1379,19 @@ function buildDocSections(){
 
   S("Reporting and Oversight",`<p>Reporting cadence: <b>${b.reporting||ph("cadence")}</b>. Meetings: kickoff, ${b.reporting==="weekly"?"weekly status, ":""}monthly program review${ph(", quarterly executive review")}. ${ph("points of contact")}</p>`);
 
-  S(isPWS?"Quality Assurance Surveillance Plan (Summary)":"Inspection and Acceptance",`
+  if(state.domain==="construction"){
+    S("Inspection and Acceptance",`
+      <p>Inspection and acceptance are conducted under FAR 52.246-12 (Inspection of Construction). The contractor shall maintain an inspection system acceptable to the Government that covers the work under this contract. The Government may inspect and test all work, materials, and workmanship at all reasonable times and places, including the place of production. The contractor shall, without additional cost to the Government, promptly correct or replace any work or materials found not to conform to the contract requirements. Acceptance of the work, or of any portion, shall be made as promptly as practicable after completion and inspection.</p>
+      <p>Where a warranty of construction is required, FAR 52.246-21 (Warranty of Construction) applies; ${ph("specify warranty period and scope")}. No Quality Assurance Surveillance Plan, Acceptable Quality Levels, or payment-deduction schedule is used for this construction requirement.</p>`);
+  } else {
+    S(isPWS?"Quality Assurance Surveillance Plan (Summary)":"Inspection and Acceptance",`
     <p>${isPWS?`Performance is assessed against the standards below (${cref("qa")}).`:`Inspection and acceptance are conducted per ${cref("inspect")}.`} A full QASP with surveillance schedules may be issued separately.</p>
     <table class="d"><thead><tr><th>Metric</th><th>Standard</th><th>AQL</th><th>Method</th><th>Frequency</th><th>Payment consequence</th></tr></thead>
     <tbody>
       <tr><td>${ph("metric")}</td><td>${esc(b.aql)||ph("standard")}</td><td>${ph("AQL")}</td><td>${ph("method")}</td><td>${b.reporting||ph("freq")}</td><td>Below threshold: ${ph("% deduction on affected invoice")}</td></tr>
     </tbody></table>
     <p style="font-size:11.5px;color:#8a5a12;background:#fdf6e6;border:1px solid #f0dcb4;border-radius:6px;padding:8px 10px;margin-top:8px">Payment-consequence column carries administrative/payment outcomes only. CPARS ratings are a separate post-performance evaluation (FAR 42.15) and are deliberately excluded.</p>`);
+  }
 
   if(b.transition&&b.transition!=="none"){
     S("Transition",`
