@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -187,8 +186,9 @@
 
   .authreg{display:grid;gap:10px}
   .auth-item{border:1px solid var(--line);border-radius:var(--r-sm);padding:13px 15px;background:#fff;display:flex;gap:13px;align-items:flex-start}
-  .auth-item .lbl{flex:none;width:112px}
-  .auth-item .lbl .cite{font-size:11px}
+  .auth-item .lbl{flex:0 0 auto;max-width:190px;min-width:92px}
+  .auth-item .meta{flex:1 1 0;min-width:0}
+  .auth-item .lbl .cite{font-size:11px;max-width:100%;white-space:normal;word-break:break-word;flex-wrap:wrap}
   .auth-item .meta .nm{font-weight:600;font-size:13.5px}
   .auth-item .meta .ds{font-size:12.5px;color:var(--muted);margin-top:2px}
   .auth-item .meta a{color:var(--primary);font-size:11.5px;font-family:var(--mono);text-decoration:none}
@@ -257,7 +257,7 @@
       <ul>
         <li>This is an <b>independent drafting aid</b>, not an official Government system and not legal or contracting advice.</li>
         <li>It produces a <b>draft with marked placeholders</b>. A contracting officer must review and complete it.</li>
-        <li>Regulatory references are current <b>as of September 2026</b> and the RFO model text moves often — verify against <b>acquisition.gov/far-overhaul</b> before any solicitation release.</li>
+        <li>Regulatory references are current <b>as of July 2026</b> and the RFO model text moves often — verify against <b>acquisition.gov/far-overhaul</b> before any solicitation release.</li>
         <li>Everything runs <b>in your browser</b>. Nothing you type is uploaded, stored on a server, or transmitted anywhere.</li>
       </ul>
     </div>
@@ -335,11 +335,11 @@ const AGENCIES = {
 
 // Authority register — dated, source-linked.
 const AUTHORITIES = [
-  {id:"EO 14275", name:"Restoring Common Sense to Federal Procurement", ds:"Anchor executive order launching the FAR overhaul.", asof:ASOF, url:FAR_OVERHAUL, regime:"rfo"},
-  {id:"OMB M-25-26", name:"Overhauling the Federal Acquisition Regulation", ds:"OMB implementation memorandum directing the RFO.", asof:ASOF, url:FAR_OVERHAUL, regime:"rfo"},
+  {id:"EO 14275", name:"Restoring Common Sense to Federal Procurement", ds:"Anchor executive order launching the FAR overhaul.", asof:ASOF, url:"https://www.federalregister.gov/executive-order/14275", regime:"rfo"},
+  {id:"OMB M-25-26", name:"Overhauling the Federal Acquisition Regulation", ds:"OMB implementation memorandum directing the RFO.", asof:ASOF, url:"https://www.whitehouse.gov/omb/information-resources/guidance/memoranda/", regime:"rfo"},
   {id:"FAR Council Dev. Guidance", name:"Deviation Guidance to Support the Overhaul of the FAR", ds:"Mechanism: agencies adopt RFO model deviation text in lieu of codified CFR parts.", asof:ASOF, url:DEV_GUIDE, regime:"rfo"},
-  {id:"EO 14402", name:"Promoting Efficiency, Accountability, and Performance in Federal Contracting", ds:"Fixed-price as default & preferred type; FAR 16.104 justification for covered contracts. Issued Apr 30, 2026.", asof:ASOF, url:FAR_OVERHAUL, regime:"rfo"},
-  {id:"EO 14398", name:"Addressing DEI Discrimination by Federal Contractors", ds:"Rewrote FAR Part 22 / 52 clause text. Handled at the solicitation layer, not the requirement body.", asof:ASOF, url:FAR_OVERHAUL, regime:"rfo"}
+  {id:"EO 14402", name:"Promoting Efficiency, Accountability, and Performance in Federal Contracting", ds:"Fixed-price as default & preferred type; FAR 16.104 justification for covered contracts. Issued Apr 30, 2026.", asof:ASOF, url:"https://www.federalregister.gov/executive-order/14402", regime:"rfo"},
+  {id:"EO 14398", name:"Addressing DEI Discrimination by Federal Contractors", ds:"Rewrote FAR Part 22 / 52 clause text. Handled at the solicitation layer, not the requirement body.", asof:ASOF, url:"https://www.federalregister.gov/executive-order/14398", regime:"rfo"}
 ];
 
 // Citation resolver: key -> {legacy, rfo, note}
