@@ -1505,7 +1505,8 @@ function applicableDocs(){
 function securitySection(){
   const b=state.b, parts=[];
   if(b.secFCI!=="no"){
-    parts.push(`<p>Federal Contract Information (FCI) shall be safeguarded on covered contractor information systems in accordance with ${cref("safeguard")} (Basic Safeguarding of Covered Contractor Information Systems). This clause addresses FCI only and does not establish Controlled Unclassified Information (CUI) requirements.</p>`);
+    const fciRfo = state.regime==="rfo" ? ` Under the RFO, cite the corresponding model deviation text (${citeText("safeguard")}) in lieu of the codified clause.` : "";
+    parts.push(`<p>Federal Contract Information (FCI) shall be safeguarded on covered contractor information systems in accordance with FAR 52.204-21 (Basic Safeguarding of Covered Contractor Information Systems). This clause addresses FCI only and does not establish Controlled Unclassified Information (CUI) requirements.${fciRfo}</p>`);
   }
   if(b.secCUI==="yes"){
     const dod = state.agencyKey==="DOD";
