@@ -267,7 +267,7 @@
       <button class="load" onclick="document.getElementById('loadFileGate').click()">Load saved draft</button>
       <input type="file" id="loadFileGate" accept="application/json" style="display:none" onchange="loadDraft(this.files[0],true)">
     </div>
-    <div class="foot">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener" style="color:#9fb0bf">James Jenrette · 1102tools.com</a> (MIT).<br>Runs offline · single file · v2.1.1 · © The Wolverine Group, Inc.</div>
+    <div class="foot">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener" style="color:#9fb0bf">James Jenrette · 1102tools.com</a> (MIT).<br>Runs offline · single file · v2.1.2 · © The Wolverine Group, Inc.</div>
   </div>
 </div>
 
@@ -277,7 +277,7 @@
       <div class="brand-mark">§</div>
       <div>
         <h1>SOW / PWS Builder</h1>
-        <div class="sub">RFO-aware · v2.1.1</div>
+        <div class="sub">RFO-aware · v2.1.2</div>
       </div>
     </div>
     <div class="rail-note">Scope decisions in, a structured draft requirement out. Staffing, CLINs, and the 16.104 justification stay out of the document body by design.</div>
@@ -299,7 +299,7 @@
     </div>
     <div class="content" id="content"></div>
     <footer class="sitefoot">
-      <span class="v">SOW / PWS Builder v2.1.1 · regulatory content last reviewed <span id="lastReviewed"></span></span>
+      <span class="v">SOW / PWS Builder v2.1.2 · regulatory content last reviewed <span id="lastReviewed"></span></span>
       <span class="disc">Independent drafting aid — not an official Government system, and not legal or contracting advice. Citations current as of the review date above; the RFO model text changes often — verify against the source before release at <a href="https://www.acquisition.gov/far-overhaul" target="_blank" rel="noopener">acquisition.gov/far-overhaul ↗</a></span>
       <span class="disc">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener">James Jenrette · 1102tools.com</a> (MIT). Maintained independently by The Wolverine Group, Inc.</span>
     </footer>
@@ -527,7 +527,7 @@ function opt(val,cur,t,d,onclick){
 function navbar(canNext,label){
   return `<div class="navbar">
     <button class="btn ghost" onclick="prev()" ${state.step===0?'style="visibility:hidden"':''}>← Back</button>
-    <button class="btn primary" ${canNext?"":"disabled"} onclick="next()">${label||"Continue"} →</button>
+    <button class="btn primary" id="staffingNavBtn" ${canNext?"":"disabled"} onclick="next()">${label||"Continue"} →</button>
   </div>`;
 }
 
@@ -1241,14 +1241,8 @@ function derive_svc(){
   add("Quality Control Manager","13-1041",1,lp,"Suggested oversight role — not derived from a specific input. Confirm need for this scope.");
   const parsed=parseVolumeNum(b.svcWorkload);
   if(parsed.error) rows.__volumeError=parsed.error;
-  else {
-    let num=parsed.value;
-    let line=2;
-    if(num){ if(num>=100000)line=8; else if(num>=25000)line=5; else if(num>=5000)line=3; }
-    if(b.coverage==="ext") line=Math.round(line*1.5);
-    add("Functional Supervisor","43-1011",Math.max(1,Math.round(line/8)),lp,"~1 per 8 line staff");
-    add(b.svcSca==="yes"?"Service Specialist (SCA-covered)":"Service Specialist","43-9061",line,lp,`Derived from workload${b.svcSca==="yes"?"; SCA wage determination applies":""}${b.coverage==="247"?" (24/7/365 selected — this demand-derived count is not adjusted by the continuous-seat coverage factor; add seats explicitly with a stated basis if needed)":""}`);
-  }
+  add(b.svcSca==="yes"?"Service Specialist (SCA-covered)":"Service Specialist","43-9061","",lp,`Enter quantity and basis — not auto-derived from workload units${b.svcWorkload?` ("${b.svcWorkload}" carries no hours-per-unit or productivity basis)`:""}.${b.svcSca==="yes"?" SCA wage determination applies.":""}`);
+  add("Functional Supervisor","43-1011","",lp,"Enter quantity and basis — ratio depends on the line-staff quantity above; not auto-derived.");
   if(b.svcSurge==="surge") add("Surge / Flex Staff","43-9061","2",lp,"Periodic surge (variable)");
   if(b.basescope==="rampup"||b.transition==="in"||b.transition==="both") add("Transition Lead","13-1082","0.5","Base","Phase-in (time-limited)");
   return rows;
@@ -1292,10 +1286,30 @@ function derive_rnd(){
   return rows;
 }
 function buildStaffing(){
-  const rows=deriveStaffing();
-  state.staffingVolumeError = rows.__volumeError||null;
-  state.staffing=rows; state.staffingBuilt=true; state.staffingStale=false; state.staffingNeedsReconfirm=false;
+  const prevOverrides = (state.staffing||[]).filter(r=>r.override);
+  const norm = s => (s||"").trim().toLowerCase();
+  const newRows=deriveStaffing();
+  state.staffingVolumeError = newRows.__volumeError||null;
+  const matched=new Set();
+  const merged=newRows.map(nr=>{
+    const m=prevOverrides.find(pr=>norm(pr.lcat)===norm(nr.lcat));
+    if(m){ matched.add(m); return {...nr, ftes:m.ftes, override:true, notes:`OVERRIDE RETAINED: user ${m.ftes||"(blank)"} FTE; current suggestion ${nr.ftes||"—"} — reconfirm.`}; }
+    return nr;
+  });
+  const orphaned=prevOverrides.filter(pr=>!matched.has(pr)).map(pr=>({...pr, override:true, notes:`OVERRIDE RETAINED (role no longer suggested): user ${pr.ftes||"(blank)"} FTE — reconfirm.`}));
+  state.staffing=merged.concat(orphaned);
+  state.staffingBuilt=true; state.staffingStale=false;
+  state.staffingNeedsReconfirm = prevOverrides.length>0;
   render();
+}
+function stagingImmediate(){
+  const btn=document.getElementById("staffingNavBtn"); if(btn) btn.disabled=true;
+  const banner=document.getElementById("staffingReconfirmBanner"); if(banner) banner.style.display="block";
+}
+function stagingEdit(i,field,val){
+  const r=state.staffing[i]; if(!r) return;
+  r[field]=val; r.override=true; state.staffingNeedsReconfirm=true; invalidateApproval();
+  stagingImmediate();
 }
 
 function renderStaffing(){
@@ -1309,11 +1323,11 @@ function renderStaffing(){
       </div>${navbar(false)}`;
   }
   const rows=state.staffing.map((r,i)=>`<tr>
-    <td><input class="tbl-input" value="${esc(r.lcat)}" oninput="state.staffing[${i}].lcat=this.value;state.staffing[${i}].override=true;state.staffingNeedsReconfirm=true;invalidateApproval()"></td>
-    <td><input class="tbl-input mono" value="${esc(r.soc)}" oninput="state.staffing[${i}].soc=this.value;state.staffing[${i}].override=true;state.staffingNeedsReconfirm=true;invalidateApproval()" style="font-family:var(--mono)"></td>
-    <td style="width:64px"><input class="tbl-input mono" value="${esc(r.ftes)}" oninput="state.staffing[${i}].ftes=this.value;state.staffing[${i}].override=true;state.staffingNeedsReconfirm=true;invalidateApproval()" style="font-family:var(--mono)"></td>
-    <td><input class="tbl-input" value="${esc(r.phase)}" oninput="state.staffing[${i}].phase=this.value;state.staffing[${i}].override=true;state.staffingNeedsReconfirm=true;invalidateApproval()"></td>
-    <td><input class="tbl-input" value="${r.override?"OVERRIDDEN — "+esc(r.notes):esc(r.notes)}" oninput="state.staffing[${i}].notes=this.value;state.staffing[${i}].override=true;state.staffingNeedsReconfirm=true;invalidateApproval()"></td>
+    <td><input class="tbl-input" value="${esc(r.lcat)}" oninput="stagingEdit(${i},'lcat',this.value)" onchange="render()"></td>
+    <td><input class="tbl-input mono" value="${esc(r.soc)}" oninput="stagingEdit(${i},'soc',this.value)" onchange="render()" style="font-family:var(--mono)"></td>
+    <td style="width:64px"><input class="tbl-input mono" value="${esc(r.ftes)}" oninput="stagingEdit(${i},'ftes',this.value)" onchange="render()" style="font-family:var(--mono)"></td>
+    <td><input class="tbl-input" value="${esc(r.phase)}" oninput="stagingEdit(${i},'phase',this.value)" onchange="render()"></td>
+    <td><input class="tbl-input" value="${r.override?"OVERRIDDEN — "+esc(r.notes):esc(r.notes)}" oninput="stagingEdit(${i},'notes',this.value)" onchange="render()"></td>
     <td style="width:34px"><button class="row-del" title="Remove" onclick="state.staffing.splice(${i},1);state.staffingNeedsReconfirm=true;invalidateApproval();render()">×</button></td>
   </tr>`).join("");
   const total=state.staffing.reduce((s,r)=>s+(parseFloat(r.ftes)||0),0);
@@ -1330,7 +1344,7 @@ function renderStaffing(){
       </div>
       ${total>50?`<div class="callout warn" style="margin-top:12px"><h4>⚠ Scope flag</h4>Derived effort exceeds 50 FTE — consider whether this should break into multiple contracts (e.g., development vs. operations).</div>`:""}
     </div>
-    ${state.staffingNeedsReconfirm?`<div class="callout warn"><h4>⚠ Overrides need reconfirmation</h4>One or more lines were edited after derivation. Reconfirm before continuing.<div style="margin-top:10px"><button class="btn primary" onclick="state.staffingNeedsReconfirm=false;render()">Reconfirm overrides</button></div></div>`:""}
+    ${state.staffingNeedsReconfirm?`<div class="callout warn" id="staffingReconfirmBanner"><h4>⚠ Overrides need reconfirmation</h4>One or more lines were edited after derivation. Reconfirm before continuing.<div style="margin-top:10px"><button class="btn primary" onclick="state.staffingNeedsReconfirm=false;render()">Reconfirm overrides</button></div></div>`:`<div class="callout warn" id="staffingReconfirmBanner" style="display:none"><h4>⚠ Overrides need reconfirmation</h4>One or more lines were edited after derivation. Reconfirm before continuing.<div style="margin-top:10px"><button class="btn primary" onclick="state.staffingNeedsReconfirm=false;render()">Reconfirm overrides</button></div></div>`}
     ${navbar(!state.staffingNeedsReconfirm,"Review decision summary")}`;
 }
 
@@ -1520,7 +1534,7 @@ function buildDocSections(){
     <h3 class="sub">§§.3 Scope Summary</h3><p>${scopeSummary()}</p>
     <h3 class="sub">§§.4 Applicable Documents and Standards</h3>${applicableDocs()}`);
 
-  S("Definitions and Acronyms",`<p>${ph("define program-specific terms")}. See Appendix D for the acronym list.</p>`);
+  S("Definitions and Acronyms",`<p>${ph("define program-specific terms")}. See the acronym-list appendix.</p>`);
 
   domainSection3(S,isPWS,b);
 
