@@ -267,7 +267,7 @@
       <button class="load" onclick="document.getElementById('loadFileGate').click()">Load saved draft</button>
       <input type="file" id="loadFileGate" accept="application/json" style="display:none" onchange="loadDraft(this.files[0],true)">
     </div>
-    <div class="foot">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener" style="color:#9fb0bf">James Jenrette · 1102tools.com</a> (MIT).<br>Runs offline · single file · v2.1 · © The Wolverine Group, Inc.</div>
+    <div class="foot">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener" style="color:#9fb0bf">James Jenrette · 1102tools.com</a> (MIT).<br>Runs offline · single file · v2.1.1 · © The Wolverine Group, Inc.</div>
   </div>
 </div>
 
@@ -277,7 +277,7 @@
       <div class="brand-mark">§</div>
       <div>
         <h1>SOW / PWS Builder</h1>
-        <div class="sub">RFO-aware · v2.1</div>
+        <div class="sub">RFO-aware · v2.1.1</div>
       </div>
     </div>
     <div class="rail-note">Scope decisions in, a structured draft requirement out. Staffing, CLINs, and the 16.104 justification stay out of the document body by design.</div>
@@ -299,7 +299,7 @@
     </div>
     <div class="content" id="content"></div>
     <footer class="sitefoot">
-      <span class="v">SOW / PWS Builder v2.1 · regulatory content last reviewed <span id="lastReviewed"></span></span>
+      <span class="v">SOW / PWS Builder v2.1.1 · regulatory content last reviewed <span id="lastReviewed"></span></span>
       <span class="disc">Independent drafting aid — not an official Government system, and not legal or contracting advice. Citations current as of the review date above; the RFO model text changes often — verify against the source before release at <a href="https://www.acquisition.gov/far-overhaul" target="_blank" rel="noopener">acquisition.gov/far-overhaul ↗</a></span>
       <span class="disc">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener">James Jenrette · 1102tools.com</a> (MIT). Maintained independently by The Wolverine Group, Inc.</span>
     </footer>
@@ -313,7 +313,6 @@
 /* ---- MAINTENANCE: update these two lines when you review regulatory content ---- */
 const ASOF = "Jul 2026";              // stamp shown on every citation token
 const PROD_HRS = 1880;                // standard productive hours per person-year
-const COVERAGE_247 = 8760 / PROD_HRS; // ≈ 4.66 people to staff one seat continuously (8,760 annual hours ÷ productive hours)
 const REVIEWED = "18 July 2026";      // stamp shown in the footer
 const FAC = "FAC 2026-01, effective 13 March 2026"; // codified FAR revision stamp
 const FAR_INDEX = "https://www.acquisition.gov/browse/index/far";
@@ -1232,8 +1231,6 @@ function derive_it(){
   if(b.geo==="multi"||(units&&units>=3)) add("Change Mgmt / Training Specialist","13-1151",1,lp,"Multi-site or 3+ org units");
   add("Information Security Analyst","15-1212",1,lp,"Suggested — FISMA/safeguarding support; not derived from a specific input. Confirm need, or remove, for this scope.");
   if(b.basescope==="rampup"||b.transition==="in"||b.transition==="both") add("Transition Lead","13-1082","0.5","Base","Knowledge transfer (time-limited)");
-  const volErr=parseVolumeNum(b.volume).error;
-  if(volErr) rows.__volumeError=volErr;
   return rows;
 }
 
@@ -1493,8 +1490,6 @@ function domainRefs(){
 }
 function farSectionSlug(ref){
   const first = ref.split(" / ")[0].replace(/^FAR\s*/i,"").trim();
-  const paren = first.match(/\(([\d.]+)\)/);
-  if(paren) return paren[1];
   const partMatch = first.match(/^Part\s+(\d+)/i);
   if(partMatch) return "part-"+partMatch[1];
   const secMatch = first.match(/^(\d+(?:\.\d+)*(?:-\d+)?)/);
@@ -1613,13 +1608,6 @@ function securitySection(){
   }
   return parts.join("\n  ");
 }
-function optionYearHeaders(){ const oy=state.b.pop==="base_oy"?(parseInt(state.b.oy)||0):0; let h=""; for(let i=1;i<=oy;i++)h+=`<th>OY${i}</th>`; return h; }
-function ceilingRows(){
-  const oy=state.b.pop==="base_oy"?(parseInt(state.b.oy)||0):0;
-  const cats=[...new Set(state.staffing.map(r=>r.lcat))].slice(0,6);
-  return cats.map(c=>`<tr><td>${esc(c)}</td><td>${ph("hrs")}</td>${Array(oy).fill(`<td>${ph("hrs")}</td>`).join("")}<td>${ph("total")}</td></tr>`).join("")||`<tr><td>${ph("labor category")}</td><td>${ph("hrs")}</td>${Array(oy).fill(`<td>${ph("hrs")}</td>`).join("")}<td>${ph("total")}</td></tr>`;
-}
-
 function appendicesText(){
   const b=state.b;
   if(b.appendices && b.appendices.trim()) return b.appendices.trim();
