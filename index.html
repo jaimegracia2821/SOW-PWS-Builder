@@ -436,7 +436,8 @@ function citeToken(key){
   const c = CITES[key]; if(!c) return "";
   const rfo = state.regime==="rfo";
   const ref = rfo ? c.rfo : c.legacy;
-  return `<span class="cite ${rfo?'rfo':'legacy'}" title="${esc(c.note)}">${esc(ref)}<span class="asof">${rfo?ASOF:'FAR'}</span></span>`;
+  const asof = rfo ? `<span class="asof">${ASOF}</span>` : "";
+  return `<span class="cite ${rfo?'rfo':'legacy'}" title="${esc(c.note)}">${esc(ref)}${asof}</span>`;
 }
 function citeText(key){ const c=CITES[key]; return state.regime==="rfo"?c.rfo:c.legacy; }
 
