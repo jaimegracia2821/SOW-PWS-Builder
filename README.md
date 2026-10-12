@@ -7,6 +7,8 @@ and Executive Order 14402.
 
 **▶ Live tool:**  https://jaimegracia2821.github.io/SOW-PWS-Builder/
 
+**📘 User guide:**  [docs/TWG_SOW-PWS-Builder_User-Guide.pdf](docs/TWG_SOW-PWS-Builder_User-Guide.pdf)
+
 No install, no account, no backend. Everything runs in the browser; nothing you
 type is uploaded or stored anywhere.
 

@@ -21,6 +21,9 @@ build step — change, save, re-upload.
 5. **Verify the `AUTHORITIES` register** — the EO / OMB / deviation-guidance
    entries that populate Section 1.4 of generated documents.
 6. Bump the version string in the footer and note the change below.
+7. **Check the user guide** (`docs/TWG_SOW-PWS-Builder_User-Guide.pdf`) — if any
+   step name, button label, tab, status-chip text, or URL changed, update the guide
+   and note it below.
 
 ## Where things live
 
@@ -50,3 +53,4 @@ These are load-bearing. Changing them breaks the tool's core promise.
 |---|---|
 | 2026-07-18 | Initial public release. Content reviewed against RFO model text and EO 14402 implementation guidance. |
 | 2026-10-15 | v2.1.3 — Q4 2026 quarterly review (sources checked 2026-10-12). No Part renumbering; RFO Part 16 still carries the EO 14402 text (16.104 justification, 16.105 solicitation provision). EO 14402 thresholds re-verified against the FAR Council memo of 2026-06-25 (DoD $100M · NASA $35M · DHS $25M · others $10M). FAC 2026-01 still current for codified FAR. CPFF RFO cite narrowed to RFO 16.304-3. Added FAR Council EO 14402 guidance to `AUTHORITIES`; M-25-26 now links to the memo PDF. Landing-screen "as of" date now reads from `ASOF`. |
+| 2026-10-12 | User guide v2.1 added at `docs/TWG_SOW-PWS-Builder_User-Guide.pdf` and linked from the README. Changes from guide v2.0: live-tool and source URLs updated to the renamed `SOW-PWS-Builder` repo (the old lowercase Pages URL no longer resolves), TWG tool page added, §7.2 now states the quarterly review cadence and points to this change log. UI labels, steps, tabs, and status-chip text re-verified against v2.1.3 — no other changes needed. |
