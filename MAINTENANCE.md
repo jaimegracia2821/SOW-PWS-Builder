@@ -49,3 +49,4 @@ These are load-bearing. Changing them breaks the tool's core promise.
 | Date | Change |
 |---|---|
 | 2026-07-18 | Initial public release. Content reviewed against RFO model text and EO 14402 implementation guidance. |
+| 2026-10-15 | v2.1.3 — Q4 2026 quarterly review (sources checked 2026-10-12). No Part renumbering; RFO Part 16 still carries the EO 14402 text (16.104 justification, 16.105 solicitation provision). EO 14402 thresholds re-verified against the FAR Council memo of 2026-06-25 (DoD $100M · NASA $35M · DHS $25M · others $10M). FAC 2026-01 still current for codified FAR. CPFF RFO cite narrowed to RFO 16.304-3. Added FAR Council EO 14402 guidance to `AUTHORITIES`; M-25-26 now links to the memo PDF. Landing-screen "as of" date now reads from `ASOF`. |

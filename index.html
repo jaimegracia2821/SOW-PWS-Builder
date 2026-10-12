@@ -258,7 +258,7 @@
       <ul>
         <li>This is an <b>independent drafting aid</b>, not an official Government system and not legal or contracting advice.</li>
         <li>It produces a <b>draft with marked placeholders</b>. A contracting officer must review and complete it.</li>
-        <li>Regulatory references are current <b>as of July 2026</b> and the RFO model text moves often — verify against <b>acquisition.gov/far-overhaul</b> before any solicitation release.</li>
+        <li>Regulatory references are current <b>as of <span id="asOfIntro">Oct 2026</span></b> and the RFO model text moves often — verify against <b>acquisition.gov/far-overhaul</b> before any solicitation release.</li>
         <li>Everything runs <b>in your browser</b>. Nothing you type is uploaded, stored on a server, or transmitted anywhere.</li>
       </ul>
     </div>
@@ -267,7 +267,7 @@
       <button class="load" onclick="document.getElementById('loadFileGate').click()">Load saved draft</button>
       <input type="file" id="loadFileGate" accept="application/json" style="display:none" onchange="loadDraft(this.files[0],true)">
     </div>
-    <div class="foot">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener" style="color:#9fb0bf">James Jenrette · 1102tools.com</a> (MIT).<br>Runs offline · single file · v2.1.2 · © The Wolverine Group, Inc.</div>
+    <div class="foot">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener" style="color:#9fb0bf">James Jenrette · 1102tools.com</a> (MIT).<br>Runs offline · single file · v2.1.3 · © The Wolverine Group, Inc.</div>
   </div>
 </div>
 
@@ -277,7 +277,7 @@
       <div class="brand-mark">§</div>
       <div>
         <h1>SOW / PWS Builder</h1>
-        <div class="sub">RFO-aware · v2.1.2</div>
+        <div class="sub">RFO-aware · v2.1.3</div>
       </div>
     </div>
     <div class="rail-note">Scope decisions in, a structured draft requirement out. Staffing, CLINs, and the 16.104 justification stay out of the document body by design.</div>
@@ -299,7 +299,7 @@
     </div>
     <div class="content" id="content"></div>
     <footer class="sitefoot">
-      <span class="v">SOW / PWS Builder v2.1.2 · regulatory content last reviewed <span id="lastReviewed"></span></span>
+      <span class="v">SOW / PWS Builder v2.1.3 · regulatory content last reviewed <span id="lastReviewed"></span></span>
       <span class="disc">Independent drafting aid — not an official Government system, and not legal or contracting advice. Citations current as of the review date above; the RFO model text changes often — verify against the source before release at <a href="https://www.acquisition.gov/far-overhaul" target="_blank" rel="noopener">acquisition.gov/far-overhaul ↗</a></span>
       <span class="disc">Built on the open-source federal contracting skills framework by <a href="https://1102tools.com" target="_blank" rel="noopener">James Jenrette · 1102tools.com</a> (MIT). Maintained independently by The Wolverine Group, Inc.</span>
     </footer>
@@ -311,9 +311,9 @@
 
 /* ============================ DATA ============================ */
 /* ---- MAINTENANCE: update these two lines when you review regulatory content ---- */
-const ASOF = "Jul 2026";              // stamp shown on every citation token
+const ASOF = "Oct 2026";              // stamp shown on every citation token
 const PROD_HRS = 1880;                // standard productive hours per person-year
-const REVIEWED = "18 July 2026";      // stamp shown in the footer
+const REVIEWED = "15 October 2026";      // stamp shown in the footer
 const FAC = "FAC 2026-01, effective 13 March 2026"; // codified FAR revision stamp
 const FAR_INDEX = "https://www.acquisition.gov/browse/index/far";
 /* ------------------------------------------------------------------------------- */
@@ -321,7 +321,7 @@ const FAR_OVERHAUL = "https://www.acquisition.gov/far-overhaul";
 const DEV_GUIDE = "https://www.acquisition.gov/far-overhaul/far-part-deviation-guide";
 
 // Preloaded agencies with EO 14402 / FAR 16.104 agency-head approval thresholds.
-// Thresholds per FAR Council Guidance to Implement E.O. 14402 (as of Jul 2026).
+// Thresholds per FAR Council memo "Agency Implementation of Executive Order 14402" (June 25, 2026); re-verified Oct 2026.
 const AGENCIES = {
   DOD:  {name:"Department of Defense (DoD)", threshold:100000000, devSeries:"DPCAP class deviation (DFARS/FAR)", note:"$100M agency-head approval tier. Some sources render this as 'Department of War'."},
   NASA: {name:"NASA", threshold:35000000, devSeries:"NASA RFO class deviation", note:"$35M agency-head approval tier."},
@@ -336,9 +336,10 @@ const AGENCIES = {
 // Authority register — dated, source-linked.
 const AUTHORITIES = [
   {id:"EO 14275", name:"Restoring Common Sense to Federal Procurement", ds:"Anchor executive order launching the FAR overhaul.", asof:ASOF, url:"https://www.federalregister.gov/executive-order/14275", regime:"rfo"},
-  {id:"OMB M-25-26", name:"Overhauling the Federal Acquisition Regulation", ds:"OMB implementation memorandum directing the RFO.", asof:ASOF, url:"https://www.whitehouse.gov/omb/information-resources/guidance/memoranda/", regime:"rfo"},
+  {id:"OMB M-25-26", name:"Overhauling the Federal Acquisition Regulation", ds:"OMB implementation memorandum directing the RFO.", asof:ASOF, url:"https://www.acquisition.gov/sites/default/files/page_file_uploads/M-25-26-Overhauling-the-Federal-Acquisition-Regulation-002.pdf", regime:"rfo"},
   {id:"FAR Council Dev. Guidance", name:"Deviation Guidance to Support the Overhaul of the FAR", ds:"Mechanism: agencies adopt RFO model deviation text in lieu of codified CFR parts.", asof:ASOF, url:DEV_GUIDE, regime:"rfo"},
   {id:"EO 14402", name:"Promoting Efficiency, Accountability, and Performance in Federal Contracting", ds:"Fixed-price as default & preferred type; FAR 16.104 justification for covered contracts. Issued Apr 30, 2026.", asof:ASOF, url:"https://www.federalregister.gov/executive-order/14402", regime:"rfo"},
+  {id:"FAR Council EO 14402 Guidance", name:"Agency Implementation of Executive Order 14402", ds:"FAR Council memo (June 25, 2026) setting the 16.104 justification thresholds and directing agencies to update Part 16/52 class deviations.", asof:ASOF, url:"https://www.acquisition.gov/sites/default/files/page_file_uploads/FAR-Council-Guidance-to-Implement-EO-14402.pdf", regime:"rfo"},
   {id:"EO 14398", name:"Addressing DEI Discrimination by Federal Contractors", ds:"Rewrote FAR Part 22 / 52 clause text. Handled at the solicitation layer, not the requirement body.", asof:ASOF, url:"https://www.federalregister.gov/executive-order/14398", regime:"rfo"}
 ];
 
@@ -350,7 +351,7 @@ const CITES = {
   inspect:   {legacy:"FAR 52.246-series", rfo:"RFO Part 46 / 52 (model deviation)", note:"Inspection & acceptance basis (SOW)."},
   ceiling:   {legacy:"FAR 16.601(d)", rfo:"RFO Part 16 (model deviation)", note:"T&M/LH ceiling-price limitation — the contract or order must include a ceiling price that the contractor exceeds at its own risk (FAR 16.601(d))."},
   fp_pref:   {legacy:"FAR 16.104", rfo:"RFO Part 16 §16.104 (EO 14402 deviation)", note:"FAR 16.104 (\"Factors in selecting contract types\") guides contract-type selection generally — it is not itself an EO 14402 justification clause. The EO 14402 fixed-price justification and agency-head approval path is an EO/RFO-deviation construct layered on top of Part 16; cite the agency's implementing class deviation for the justification requirement itself."},
-  cpff:      {legacy:"FAR 16.306(d)", rfo:"RFO Part 16 (model deviation)", note:"CPFF completion (d)(1) vs term (d)(2) form commitment."},
+  cpff:      {legacy:"FAR 16.306(d)", rfo:"RFO 16.304-3 (model deviation)", note:"CPFF completion (d)(1) vs term (d)(2) form commitment."},
   commercial:{legacy:"FAR Part 12 / 52.212-4", rfo:"RFO Part 12 (model deviation)", note:"Commercial product/service terms."},
   safeguard: {legacy:"FAR 52.204-21", rfo:"RFO Part 4 / 52 (model deviation)", note:"Basic safeguarding of contractor information systems."},
   keypers:   {legacy:"applicable agency key personnel/substitution clause", rfo:"applicable agency clause + RFO Part 37", note:"Key personnel substitution — insert the applicable agency clause."},
@@ -1946,6 +1947,7 @@ function loadDraft(file,fromGate){
 
 /* boot */
 const lrEl = document.getElementById("lastReviewed"); if(lrEl) lrEl.textContent = REVIEWED;
+const aoEl = document.getElementById("asOfIntro"); if(aoEl) aoEl.textContent = ASOF;
 document.addEventListener("input", (e)=>{ if(state.step<=5 && e.target && e.target.matches && e.target.matches("input,textarea")) invalidateStaffing(); }, true);
 render();
 </script>

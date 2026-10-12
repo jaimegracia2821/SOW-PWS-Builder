@@ -68,7 +68,7 @@ write. That is by design.
 
 The RFO model text moves constantly. This tool is dated, not evergreen.
 
-- **Regulatory content last reviewed:** 18 July 2026
+- **Regulatory content last reviewed:** 15 October 2026
 - **Review cadence:** quarterly, plus ad hoc when a deviation or EO changes
 - Every RFO citation displays its own "as of" stamp in the UI
 - The landing screen and footer both tell users to verify at
